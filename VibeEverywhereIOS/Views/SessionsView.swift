@@ -1,0 +1,80 @@
+import SwiftUI
+
+struct SessionsView: View {
+    let host: SavedHost
+    let token: String
+    let client: HostClient
+    let onConnected: () -> Void
+
+    @StateObject private var viewModel: SessionsViewModel
+
+    init(host: SavedHost, token: String, client: HostClient, onConnected: @escaping () -> Void) {
+        self.host = host
+        self.token = token
+        self.client = client
+        self.onConnected = onConnected
+        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token, client: client))
+    }
+
+    var body: some View {
+        List {
+            if let info = viewModel.hostInfo {
+                Section("Host") {
+                    LabeledContent("Display Name", value: info.displayName)
+                    LabeledContent("Version", value: info.version ?? "Unknown")
+                }
+            }
+
+            Section("Sessions") {
+                if viewModel.sessions.isEmpty, !viewModel.isLoading {
+                    Text("No sessions returned.")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(viewModel.sessions) { session in
+                    NavigationLink(value: session) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(session.title.isEmpty ? session.sessionId : session.title)
+                                .font(.headline)
+                            Text(session.workspaceRoot)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            HStack {
+                                Text(session.provider)
+                                Text(session.status)
+                                Text("controller: \(session.controllerKind)")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Section("Error") {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("Sessions")
+        .navigationDestination(for: SessionSummary.self) { session in
+            SessionDetailView(host: host, token: token, session: session, client: client)
+        }
+        .task {
+            onConnected()
+            await viewModel.refresh()
+        }
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if viewModel.isLoading {
+                    ProgressView()
+                }
+            }
+        }
+    }
+}
