@@ -3,15 +3,15 @@ import SwiftUI
 struct ConnectView: View {
     @ObservedObject var hostsStore: SavedHostsStore
     let tokenStore: TokenStore
+    let onOpenInventory: () -> Void
 
     @StateObject private var viewModel: ConnectViewModel
     @State private var pairingHost: SavedHost?
-    @State private var sessionsHost: SavedHost?
-    @State private var sessionsToken: String?
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore) {
+    init(hostsStore: SavedHostsStore, tokenStore: TokenStore, onOpenInventory: @escaping () -> Void) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
+        self.onOpenInventory = onOpenInventory
         _viewModel = StateObject(wrappedValue: ConnectViewModel())
     }
 
@@ -59,8 +59,8 @@ struct ConnectView: View {
                             return
                         }
                         hostsStore.upsert(host)
-                        sessionsToken = token
-                        sessionsHost = host
+                        _ = token
+                        onOpenInventory()
                     }
                     .disabled(viewModel.isBusy)
                 }
@@ -120,19 +120,10 @@ struct ConnectView: View {
                         tokenStore: tokenStore,
                         onComplete: { token in
                             hostsStore.upsert(host)
-                            sessionsToken = token
-                            sessionsHost = host
+                            _ = token
                             pairingHost = nil
+                            onOpenInventory()
                         }
-                    )
-                }
-            }
-            .navigationDestination(item: $sessionsHost) { host in
-                if let token = sessionsToken {
-                    SessionsView(
-                        host: host,
-                        token: token,
-                        onConnected: { hostsStore.touch(hostID: host.id) }
                     )
                 }
             }

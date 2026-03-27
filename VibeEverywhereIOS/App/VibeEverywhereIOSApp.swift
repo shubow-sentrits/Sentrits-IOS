@@ -8,7 +8,7 @@ struct VibeEverywhereIOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ConnectView(hostsStore: hostsStore, tokenStore: tokenStore)
+            AppShellView(hostsStore: hostsStore, tokenStore: tokenStore)
         }
     }
 }
