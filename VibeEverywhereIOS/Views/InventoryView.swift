@@ -3,15 +3,17 @@ import SwiftUI
 struct InventoryView: View {
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var store: InventoryStore
     @State private var createSheetHost: SavedHost?
     @State private var focusedSession: InventoryFocusedSession?
     @State private var inventoryError: String?
 
-    init(hostsStore: HostsStore, tokenStore: TokenStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
+        self.activityStore = activityStore
         _store = StateObject(wrappedValue: InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore))
     }
 
@@ -68,7 +70,7 @@ struct InventoryView: View {
                             let created = try await store.createSession(hostID: host.id, input: input)
                             if let token = hostsStore.token(for: host) {
                                 focusedSession = InventoryFocusedSession(
-                                    viewModel: SessionViewModel(host: host, token: token, session: created)
+                                    viewModel: SessionViewModel(host: host, token: token, session: created, activityStore: activityStore)
                                 )
                             }
                         } catch {
@@ -329,7 +331,7 @@ struct InventoryView: View {
                         focusedSession = nil
                     } else if let token = section.token {
                         focusedSession = InventoryFocusedSession(
-                            viewModel: SessionViewModel(host: section.host, token: token, session: session)
+                            viewModel: SessionViewModel(host: section.host, token: token, session: session, activityStore: activityStore)
                         )
                     }
                 } label: {

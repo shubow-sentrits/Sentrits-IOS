@@ -18,7 +18,7 @@ struct AppShellView: View {
             }
 
             NavigationStack {
-                InventoryView(hostsStore: hostsStore, tokenStore: tokenStore)
+                InventoryView(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
             }
             .tag(1)
             .tabItem {
