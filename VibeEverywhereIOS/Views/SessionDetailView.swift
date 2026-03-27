@@ -4,14 +4,16 @@ struct SessionDetailView: View {
     let host: SavedHost
     let token: String
     let session: SessionSummary
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var viewModel: SessionViewModel
 
-    init(host: SavedHost, token: String, session: SessionSummary) {
+    init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
         self.session = session
-        _viewModel = StateObject(wrappedValue: SessionViewModel(host: host, token: token, session: session))
+        self.activityStore = activityStore
+        _viewModel = StateObject(wrappedValue: SessionViewModel(host: host, token: token, session: session, activityStore: activityStore))
     }
 
     var body: some View {
@@ -21,6 +23,7 @@ struct SessionDetailView: View {
             inputPanel
         }
         .padding()
+        .background(ActivityPalette.background.ignoresSafeArea())
         .navigationTitle(session.title.isEmpty ? session.sessionId : session.title)
         .navigationBarTitleDisplayMode(.inline)
         .task {

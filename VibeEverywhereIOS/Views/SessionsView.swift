@@ -4,14 +4,16 @@ struct SessionsView: View {
     let host: SavedHost
     let token: String
     let onConnected: () -> Void
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var viewModel: SessionsViewModel
 
-    init(host: SavedHost, token: String, onConnected: @escaping () -> Void) {
+    init(host: SavedHost, token: String, onConnected: @escaping () -> Void, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
         self.onConnected = onConnected
-        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token))
+        self.activityStore = activityStore
+        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token, activityStore: activityStore))
     }
 
     var body: some View {
@@ -57,8 +59,10 @@ struct SessionsView: View {
             }
         }
         .navigationTitle("Sessions")
+        .scrollContentBackground(.hidden)
+        .background(ActivityPalette.background.ignoresSafeArea())
         .navigationDestination(for: SessionSummary.self) { session in
-            SessionDetailView(host: host, token: token, session: session)
+            SessionDetailView(host: host, token: token, session: session, activityStore: activityStore)
         }
         .task {
             onConnected()

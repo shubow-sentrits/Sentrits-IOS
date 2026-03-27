@@ -3,16 +3,18 @@ import SwiftUI
 struct PairingView: View {
     let host: SavedHost
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
     let onComplete: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PairingViewModel
 
-    init(host: SavedHost, tokenStore: TokenStore, onComplete: @escaping (String) -> Void) {
+    init(host: SavedHost, tokenStore: TokenStore, activityStore: ActivityLogStore, onComplete: @escaping (String) -> Void) {
         self.host = host
         self.tokenStore = tokenStore
+        self.activityStore = activityStore
         self.onComplete = onComplete
-        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, tokenStore: tokenStore))
+        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, tokenStore: tokenStore, activityStore: activityStore))
     }
 
     var body: some View {
@@ -68,6 +70,8 @@ struct PairingView: View {
             }
         }
         .navigationTitle("Pair Host")
+        .scrollContentBackground(.hidden)
+        .background(ActivityPalette.background.ignoresSafeArea())
         .onChange(of: viewModel.statusMessage) {
             guard viewModel.statusMessage == "Pairing approved. Token saved.",
                   let hostToken = tokenStore.token(for: host.tokenKey) else {

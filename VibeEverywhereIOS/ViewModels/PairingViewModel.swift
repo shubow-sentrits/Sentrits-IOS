@@ -11,12 +11,14 @@ final class PairingViewModel: ObservableObject {
 
     private let host: SavedHost
     private let tokenStore: TokenStore
+    private let activityStore: ActivityLogStore
     private var pollingTask: Task<Void, Never>?
     private let pollIntervalNanoseconds: UInt64 = 2_000_000_000
 
-    init(host: SavedHost, tokenStore: TokenStore) {
+    init(host: SavedHost, tokenStore: TokenStore, activityStore: ActivityLogStore) {
         self.host = host
         self.tokenStore = tokenStore
+        self.activityStore = activityStore
     }
 
     func start() async {
@@ -31,11 +33,26 @@ final class PairingViewModel: ObservableObject {
             response = try await client.startPairing(for: host, deviceName: deviceName)
             isWaitingForApproval = true
             statusMessage = "Waiting for host approval."
+            if let response {
+                activityStore.record(
+                    category: .pairing,
+                    title: "Pairing requested",
+                    message: "Waiting for approval using code \(response.code).",
+                    host: host
+                )
+            }
             startPollingIfNeeded()
         } catch {
             isWaitingForApproval = false
             statusMessage = error.localizedDescription
             retryableError = error.localizedDescription
+            activityStore.record(
+                severity: .warning,
+                category: .pairing,
+                title: "Pairing request failed",
+                message: error.localizedDescription,
+                host: host
+            )
         }
     }
 
@@ -43,12 +60,25 @@ final class PairingViewModel: ObservableObject {
         retryableError = nil
         statusMessage = "Waiting for host approval."
         isWaitingForApproval = true
+        activityStore.record(
+            category: .pairing,
+            title: "Pairing polling resumed",
+            message: "Retrying claim polling after an interruption.",
+            host: host
+        )
         startPollingIfNeeded(forceRestart: true)
     }
 
     func cancel() {
         stopPolling()
         isWaitingForApproval = false
+        activityStore.record(
+            severity: .warning,
+            category: .pairing,
+            title: "Pairing canceled",
+            message: "Stopped waiting for host approval on this device.",
+            host: host
+        )
     }
 
     deinit {
@@ -73,6 +103,12 @@ final class PairingViewModel: ObservableObject {
                         self.isWaitingForApproval = false
                         self.retryableError = nil
                         self.statusMessage = "Pairing approved. Token saved."
+                        self.activityStore.record(
+                            category: .pairing,
+                            title: "Pairing approved",
+                            message: "Token saved and ready for session access.",
+                            host: host
+                        )
                         self.stopPolling()
                     }
                     return
@@ -87,6 +123,13 @@ final class PairingViewModel: ObservableObject {
                         self.isWaitingForApproval = false
                         self.retryableError = error.localizedDescription
                         self.statusMessage = "Pairing claim failed. Retry to continue waiting."
+                        self.activityStore.record(
+                            severity: .warning,
+                            category: .pairing,
+                            title: "Pairing claim interrupted",
+                            message: error.localizedDescription,
+                            host: host
+                        )
                         self.stopPolling()
                     }
                     return

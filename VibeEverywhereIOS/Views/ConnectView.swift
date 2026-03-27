@@ -3,20 +3,21 @@ import SwiftUI
 struct ConnectView: View {
     @ObservedObject var hostsStore: SavedHostsStore
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var viewModel: ConnectViewModel
     @State private var pairingHost: SavedHost?
     @State private var sessionsHost: SavedHost?
     @State private var sessionsToken: String?
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore) {
+    init(hostsStore: SavedHostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
-        _viewModel = StateObject(wrappedValue: ConnectViewModel())
+        self.activityStore = activityStore
+        _viewModel = StateObject(wrappedValue: ConnectViewModel(activityStore: activityStore))
     }
 
     var body: some View {
-        NavigationStack {
             Form {
                 Section("Host") {
                     TextField("Name", text: $viewModel.hostName)
@@ -45,6 +46,12 @@ struct ConnectView: View {
                             return
                         }
                         hostsStore.upsert(host)
+                        activityStore.record(
+                            category: .pairing,
+                            title: "Pairing flow opened",
+                            message: "Prepared host for pairing from the pairing tab.",
+                            host: host
+                        )
                         pairingHost = host
                     }
                     .disabled(viewModel.isBusy)
@@ -61,6 +68,12 @@ struct ConnectView: View {
                         hostsStore.upsert(host)
                         sessionsToken = token
                         sessionsHost = host
+                        activityStore.record(
+                            category: .inventory,
+                            title: "Sessions opened",
+                            message: "Opened the saved session inventory for this host.",
+                            host: host
+                        )
                     }
                     .disabled(viewModel.isBusy)
                 }
@@ -113,11 +126,14 @@ struct ConnectView: View {
                 }
             }
             .navigationTitle("VibeEverywhere")
+            .scrollContentBackground(.hidden)
+            .background(ActivityPalette.background.ignoresSafeArea())
             .sheet(item: $pairingHost) { host in
                 NavigationStack {
                     PairingView(
                         host: host,
                         tokenStore: tokenStore,
+                        activityStore: activityStore,
                         onComplete: { token in
                             hostsStore.upsert(host)
                             sessionsToken = token
@@ -132,10 +148,10 @@ struct ConnectView: View {
                     SessionsView(
                         host: host,
                         token: token,
-                        onConnected: { hostsStore.touch(hostID: host.id) }
+                        onConnected: { hostsStore.touch(hostID: host.id) },
+                        activityStore: activityStore
                     )
                 }
             }
-        }
     }
 }
