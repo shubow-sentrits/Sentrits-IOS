@@ -12,6 +12,13 @@ final class TerminalEngine: ObservableObject {
         !outputChunksBase64.isEmpty
     }
 
+    var renderedText: String {
+        outputChunksBase64.compactMap { chunk in
+            guard let data = Data(base64Encoded: chunk) else { return nil }
+            return String(decoding: data, as: UTF8.self)
+        }.joined()
+    }
+
     func reset() {
         outputChunksBase64 = []
         nextExpectedSequence = 0
@@ -36,6 +43,10 @@ final class TerminalEngine: ObservableObject {
 
         pendingChunks[seqStart] = chunk
         flushPendingChunksIfPossible()
+    }
+
+    func ingestBase64(_ dataBase64: String, seqEnd: Int) {
+        ingestBase64(dataBase64, seqStart: seqEnd, seqEnd: seqEnd)
     }
 
     private func flushPendingChunksIfPossible() {

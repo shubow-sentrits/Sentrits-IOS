@@ -104,7 +104,7 @@ actor HostClient {
     }
 
     func fetchSessionSnapshot(sessionId: String, host: SavedHost, token: String) async throws -> SessionSnapshot {
-        try await requestJSON(path: "/sessions/\(sessionId)/snapshot", host: host, token: token, method: "GET")
+        try await requestJSON(path: "/sessions/\(sessionId)/snapshot", endpoint: host.endpoint, token: token, method: "GET")
     }
 
     func updateSessionGroupTags(
@@ -117,7 +117,7 @@ actor HostClient {
         let body = SessionGroupTagsUpdateRequest(mode: mode, tags: tags)
         return try await requestJSON(
             path: "/sessions/\(sessionId)/groups",
-            host: host,
+            endpoint: host.endpoint,
             token: token,
             method: "POST",
             body: body
