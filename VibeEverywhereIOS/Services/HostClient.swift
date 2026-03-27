@@ -28,7 +28,6 @@ enum APIError: LocalizedError {
     case invalidResponse
     case httpStatus(Int, String)
     case encodingFailed
-    case pairingStillPending
 
     var errorDescription: String? {
         switch self {
@@ -38,8 +37,6 @@ enum APIError: LocalizedError {
             return body.isEmpty ? "Request failed with status \(status)." : "Request failed with status \(status): \(body)"
         case .encodingFailed:
             return "Failed to encode request."
-        case .pairingStillPending:
-            return "Pairing is still pending host approval."
         }
     }
 }
@@ -62,34 +59,69 @@ actor HostClient {
     }
 
     func health(for host: SavedHost) async throws {
-        _ = try await requestText(path: "/health", host: host, token: nil)
+        _ = try await requestText(path: "/health", endpoint: host.endpoint, token: nil)
+    }
+
+    func health(for endpoint: HostEndpoint) async throws {
+        _ = try await requestText(path: "/health", endpoint: endpoint, token: nil)
+    }
+
+    func fetchDiscoveryInfo(for host: SavedHost) async throws -> DiscoveryInfo {
+        try await requestJSON(path: "/discovery/info", endpoint: host.endpoint, token: nil, method: "GET")
+    }
+
+    func fetchDiscoveryInfo(for endpoint: HostEndpoint) async throws -> DiscoveryInfo {
+        try await requestJSON(path: "/discovery/info", endpoint: endpoint, token: nil, method: "GET")
     }
 
     func fetchHostInfo(for host: SavedHost) async throws -> HostInfo {
-        try await requestJSON(path: "/host/info", host: host, token: nil, method: "GET")
+        try await requestJSON(path: "/host/info", endpoint: host.endpoint, token: nil, method: "GET")
+    }
+
+    func fetchHostInfo(for endpoint: HostEndpoint) async throws -> HostInfo {
+        try await requestJSON(path: "/host/info", endpoint: endpoint, token: nil, method: "GET")
     }
 
     func startPairing(for host: SavedHost, deviceName: String) async throws -> PairingRequestResponse {
         let body = PairingRequestPayload(deviceName: deviceName, deviceType: "mobile")
-        return try await requestJSON(path: "/pairing/request", host: host, token: nil, method: "POST", body: body)
+        return try await requestJSON(path: "/pairing/request", endpoint: host.endpoint, token: nil, method: "POST", body: body)
     }
 
-    func claimPairing(for host: SavedHost, pairingId: String, code: String) async throws -> PairingRecordResponse {
+    func claimPairing(for host: SavedHost, pairingId: String, code: String) async throws -> PairingClaimResponse {
         let body = PairingClaimPayload(pairingId: pairingId, code: code)
+        let bodyData = try JSONEncoder().encode(body)
+        let (data, response) = try await requestData(path: "/pairing/claim", endpoint: host.endpoint, token: nil, method: "POST", bodyData: bodyData, acceptedStatusCodes: Set([200, 202]))
         do {
-            return try await requestJSON(path: "/pairing/claim", host: host, token: nil, method: "POST", body: body)
-        } catch let APIError.httpStatus(status, body) where status == 202 {
-            if let data = body.data(using: .utf8),
-               let pending = try? JSONDecoder().decode(PairingClaimPendingResponse.self, from: data),
-               pending.status == "pending" {
-                throw APIError.pairingStillPending
-            }
-            throw APIError.pairingStillPending
+            return try JSONDecoder().decode(PairingClaimResponse.self, from: data)
+        } catch {
+            logger.error("decode failed for /pairing/claim: \(String(describing: response), privacy: .public)")
+            throw error
         }
     }
 
     func listSessions(for host: SavedHost, token: String) async throws -> [SessionSummary] {
-        try await requestJSON(path: "/sessions", host: host, token: token, method: "GET")
+        try await requestJSON(path: "/sessions", endpoint: host.endpoint, token: token, method: "GET")
+    }
+
+    func fetchSessionSnapshot(sessionId: String, host: SavedHost, token: String) async throws -> SessionSnapshot {
+        try await requestJSON(path: "/sessions/\(sessionId)/snapshot", endpoint: host.endpoint, token: token, method: "GET")
+    }
+
+    func updateSessionGroupTags(
+        sessionId: String,
+        mode: SessionGroupTagsUpdateMode,
+        tags: [String],
+        host: SavedHost,
+        token: String
+    ) async throws -> SessionGroupTagsResponse {
+        let body = SessionGroupTagsUpdateRequest(mode: mode, tags: tags)
+        return try await requestJSON(
+            path: "/sessions/\(sessionId)/groups",
+            endpoint: host.endpoint,
+            token: token,
+            method: "POST",
+            body: body
+        )
     }
 
     func createSession(host: SavedHost, token: String, input: CreateSessionInput) async throws -> SessionSummary {
@@ -99,29 +131,29 @@ actor HostClient {
             title: input.normalizedTitle,
             groupTags: input.normalizedGroupTags
         )
-        return try await requestJSON(path: "/sessions", host: host, token: token, method: "POST", body: payload)
+        return try await requestJSON(path: "/sessions", endpoint: host.endpoint, token: token, method: "POST", body: payload)
     }
 
     func stopSession(sessionId: String, host: SavedHost, token: String) async throws {
-        _ = try await requestText(path: "/sessions/\(sessionId)/stop", host: host, token: token, method: "POST")
+        _ = try await requestText(path: "/sessions/\(sessionId)/stop", endpoint: host.endpoint, token: token, method: "POST")
     }
 
     func validateToken(_ token: String, for host: SavedHost) async throws {
         _ = try await listSessions(for: host, token: token)
     }
 
-    private func requestText(path: String, host: SavedHost, token: String?, method: String = "GET") async throws -> String {
-        let (data, _) = try await requestData(path: path, host: host, token: token, method: method, bodyData: nil)
+    private func requestText(path: String, endpoint: HostEndpoint, token: String?, method: String = "GET") async throws -> String {
+        let (data, _) = try await requestData(path: path, endpoint: endpoint, token: token, method: method, bodyData: nil)
         return String(decoding: data, as: UTF8.self)
     }
 
     private func requestJSON<Response: Decodable>(
         path: String,
-        host: SavedHost,
+        endpoint: HostEndpoint,
         token: String?,
         method: String
     ) async throws -> Response {
-        let (data, response) = try await requestData(path: path, host: host, token: token, method: method, bodyData: nil)
+        let (data, response) = try await requestData(path: path, endpoint: endpoint, token: token, method: method, bodyData: nil)
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
@@ -132,7 +164,7 @@ actor HostClient {
 
     private func requestJSON<Response: Decodable, Body: Encodable>(
         path: String,
-        host: SavedHost,
+        endpoint: HostEndpoint,
         token: String?,
         method: String,
         body: Body? = nil
@@ -144,7 +176,7 @@ actor HostClient {
             bodyData = nil
         }
 
-        let (data, response) = try await requestData(path: path, host: host, token: token, method: method, bodyData: bodyData)
+        let (data, response) = try await requestData(path: path, endpoint: endpoint, token: token, method: method, bodyData: bodyData)
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
@@ -155,12 +187,13 @@ actor HostClient {
 
     private func requestData(
         path: String,
-        host: SavedHost,
+        endpoint: HostEndpoint,
         token: String?,
         method: String,
-        bodyData: Data?
+        bodyData: Data?,
+        acceptedStatusCodes: Set<Int> = Set(200 ... 299)
     ) async throws -> (Data, HTTPURLResponse) {
-        var request = URLRequest(url: host.baseURL.appending(path: path))
+        var request = URLRequest(url: endpoint.baseURL.appending(path: path))
         request.httpMethod = method
         request.timeoutInterval = 10
         if let token {
@@ -175,7 +208,7 @@ actor HostClient {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
-        guard (200 ... 299).contains(httpResponse.statusCode) else {
+        guard acceptedStatusCodes.contains(httpResponse.statusCode) else {
             let body = String(decoding: data, as: UTF8.self)
             throw APIError.httpStatus(httpResponse.statusCode, body)
         }
@@ -196,4 +229,9 @@ private struct CreateSessionPayload: Encodable {
     let workspaceRoot: String
     let title: String
     let groupTags: [String]
+}
+
+private struct SessionGroupTagsUpdateRequest: Encodable {
+    let mode: SessionGroupTagsUpdateMode
+    let tags: [String]
 }

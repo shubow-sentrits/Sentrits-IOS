@@ -58,10 +58,10 @@ final class InventoryStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var showStoppedSessions = true
 
-    private let hostsStore: SavedHostsStore
+    private let hostsStore: HostsStore
     private let tokenStore: TokenStore
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
     }
@@ -73,8 +73,8 @@ final class InventoryStore: ObservableObject {
         var nextSections: [InventoryDeviceSection] = []
         var failures: [String] = []
 
-        for host in hostsStore.hosts {
-            let token = tokenStore.token(for: host.tokenKey)
+        for host in hostsStore.savedHosts {
+            let token = hostsStore.token(for: host)
             guard let token else {
                 nextSections.append(
                     InventoryDeviceSection(host: host, token: nil, sessions: [], hostInfo: nil, errorMessage: nil)

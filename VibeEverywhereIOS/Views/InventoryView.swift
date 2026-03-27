@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct InventoryView: View {
-    @ObservedObject var hostsStore: SavedHostsStore
+    @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
 
     @StateObject private var store: InventoryStore
@@ -9,14 +9,14 @@ struct InventoryView: View {
     @State private var focusedSession: InventoryFocusedSession?
     @State private var inventoryError: String?
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
         _store = StateObject(wrappedValue: InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore))
     }
 
     var body: some View {
-        NavigationStack {
+        let base = AnyView(
             ZStack {
                 inventoryBackground
 
@@ -32,61 +32,89 @@ struct InventoryView: View {
                 }
                 .scrollIndicators(.hidden)
             }
-            .navigationTitle("Inventory")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if store.isRefreshing {
-                        ProgressView()
-                            .tint(inventoryAccent)
-                    }
-                }
-            }
-            .task {
-                await store.refresh()
-            }
-            .refreshable {
-                await store.refresh()
-            }
-            .onChange(of: hostsStore.hosts) {
-                Task { await store.refresh() }
-            }
-            .sheet(item: $createSheetHost) { host in
-                CreateSessionSheet(host: host) { input in
-                    do {
-                        let created = try await store.createSession(hostID: host.id, input: input)
-                        if let token = tokenStore.token(for: host.tokenKey) {
-                            focusedSession = InventoryFocusedSession(host: host, token: token, session: created)
+        )
+
+        let withChrome = AnyView(
+            base
+                .navigationTitle("Inventory")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if store.isRefreshing {
+                            ProgressView()
+                                .tint(inventoryAccent)
                         }
-                    } catch {
-                        inventoryError = error.localizedDescription
                     }
                 }
-            }
-            .sheet(item: $focusedSession) { focused in
-                NavigationStack {
-                    SessionDetailView(host: focused.host, token: focused.token, session: focused.session)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button("Disconnect") {
-                                    focusedSession = nil
+        )
+
+        let withRefresh = AnyView(
+            withChrome
+                .task {
+                    await store.refresh()
+                }
+                .refreshable {
+                    await store.refresh()
+                }
+                .onChange(of: hostsStore.savedHosts) {
+                    Task { await store.refresh() }
+                }
+        )
+
+        let withSheets = AnyView(
+            withRefresh
+                .sheet(item: $createSheetHost) { host in
+                    CreateSessionSheet(host: host) { input in
+                        do {
+                            let created = try await store.createSession(hostID: host.id, input: input)
+                            if let token = hostsStore.token(for: host) {
+                                focusedSession = InventoryFocusedSession(
+                                    viewModel: SessionViewModel(host: host, token: token, session: created)
+                                )
+                            }
+                        } catch {
+                            inventoryError = error.localizedDescription
+                        }
+                    }
+                }
+                .sheet(item: $focusedSession) { focused in
+                    NavigationStack {
+                        SessionDetailView(viewModel: focused.viewModel)
+                            .toolbar {
+                                ToolbarItem(placement: .topBarLeading) {
+                                    Button("Disconnect") {
+                                        focusedSession = nil
+                                    }
                                 }
                             }
-                        }
-                }
-            }
-            .alert("Inventory Error", isPresented: Binding(
-                get: { inventoryError != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        inventoryError = nil
                     }
                 }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(inventoryError ?? "")
-            }
+        )
+
+        return AnyView(
+            withSheets
+                .alert("Inventory Error", isPresented: Binding(
+                    get: { inventoryError != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            inventoryError = nil
+                        }
+                    }
+                )) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(inventoryError ?? "")
+                }
+        )
+    }
+
+    private func hostTitle(_ host: SavedHost) -> String {
+        if let alias = host.alias, !alias.isEmpty {
+            return alias
         }
+        if !host.displayName.isEmpty {
+            return host.displayName
+        }
+        return host.address
     }
 
     private var summaryPanel: some View {
@@ -163,13 +191,13 @@ struct InventoryView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private func deviceSection(_ section: InventoryDeviceSection) -> some View {
+    private func deviceSection(_ section: InventoryDeviceSection) -> AnyView {
         let visibleSessions = store.visibleSessions(for: section)
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return AnyView(VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(section.host.name.isEmpty ? section.host.address : section.host.name)
+                    Text(hostTitle(section.host))
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.92))
                     Text("\(section.host.address):\(section.host.port)")
@@ -177,7 +205,7 @@ struct InventoryView: View {
                         .foregroundStyle(Color.white.opacity(0.54))
                     if let displayName = section.hostInfo?.displayName,
                        !displayName.isEmpty,
-                       displayName != section.host.name {
+                       displayName != section.host.displayName {
                         Text(displayName)
                             .font(.caption)
                             .foregroundStyle(inventoryAccent.opacity(0.92))
@@ -229,12 +257,13 @@ struct InventoryView: View {
                 .padding(.leading, 8)
                 .padding(.top, 18)
         }
+        )
     }
 
-    private func sessionCard(section: InventoryDeviceSection, session: SessionSummary) -> some View {
-        let isFocused = focusedSession?.session.id == session.id
+    private func sessionCard(section: InventoryDeviceSection, session: SessionSummary) -> AnyView {
+        let isFocused = focusedSession?.viewModel.session.id == session.id
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return AnyView(VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(session.displayTitle)
@@ -299,7 +328,9 @@ struct InventoryView: View {
                     if isFocused {
                         focusedSession = nil
                     } else if let token = section.token {
-                        focusedSession = InventoryFocusedSession(host: section.host, token: token, session: session)
+                        focusedSession = InventoryFocusedSession(
+                            viewModel: SessionViewModel(host: section.host, token: token, session: session)
+                        )
                     }
                 } label: {
                     Label(isFocused ? "Disconnect" : "Connect", systemImage: isFocused ? "bolt.slash" : "terminal")
@@ -313,7 +344,7 @@ struct InventoryView: View {
                     Task {
                         do {
                             try await store.stopSession(hostID: section.host.id, sessionID: session.sessionId)
-                            if focusedSession?.session.id == session.id {
+                            if focusedSession?.viewModel.session.id == session.id {
                                 focusedSession = nil
                             }
                         } catch {
@@ -337,6 +368,7 @@ struct InventoryView: View {
         .padding(16)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        )
     }
 
     private func inventoryMetric(title: String, value: String) -> some View {
@@ -446,12 +478,15 @@ struct InventoryView: View {
     }
 }
 
-private struct InventoryFocusedSession: Identifiable, Equatable {
-    let host: SavedHost
-    let token: String
-    let session: SessionSummary
+private struct InventoryFocusedSession: Identifiable {
+    let id: String
+    let viewModel: SessionViewModel
 
-    var id: String { "\(host.id.uuidString)-\(session.id)" }
+    @MainActor
+    init(viewModel: SessionViewModel) {
+        self.viewModel = viewModel
+        self.id = "\(viewModel.host.id.uuidString)-\(viewModel.session.id)"
+    }
 }
 
 private struct CreateSessionSheet: View {

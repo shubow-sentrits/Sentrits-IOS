@@ -1,21 +1,23 @@
 import SwiftUI
 
 struct AppShellView: View {
-    @ObservedObject var hostsStore: SavedHostsStore
+    @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ConnectView(hostsStore: hostsStore, tokenStore: tokenStore) {
-                selectedTab = 1
+            NavigationStack {
+                PairingView(hostsStore: hostsStore, tokenStore: tokenStore)
             }
             .tag(0)
             .tabItem {
                 Label("Pairing", systemImage: "dot.radiowaves.left.and.right")
             }
 
-            InventoryView(hostsStore: hostsStore, tokenStore: tokenStore)
+            NavigationStack {
+                InventoryView(hostsStore: hostsStore, tokenStore: tokenStore)
+            }
                 .tag(1)
                 .tabItem {
                     Label("Inventory", systemImage: "square.stack.3d.up.fill")

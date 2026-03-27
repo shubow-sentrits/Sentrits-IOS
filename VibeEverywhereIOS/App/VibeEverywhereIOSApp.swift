@@ -2,13 +2,19 @@ import SwiftUI
 
 @main
 struct VibeEverywhereIOSApp: App {
-    @StateObject private var hostsStore = SavedHostsStore()
+    private let tokenStore: TokenStore
+    @StateObject private var hostsStore: HostsStore
 
-    private let tokenStore: TokenStore = KeychainTokenStore()
+    init() {
+        let tokenStore = KeychainTokenStore()
+        self.tokenStore = tokenStore
+        _hostsStore = StateObject(wrappedValue: HostsStore(tokenStore: tokenStore))
+    }
 
     var body: some Scene {
         WindowGroup {
             AppShellView(hostsStore: hostsStore, tokenStore: tokenStore)
+                .preferredColorScheme(.dark)
         }
     }
 }
