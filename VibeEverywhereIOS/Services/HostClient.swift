@@ -124,6 +124,16 @@ actor HostClient {
         )
     }
 
+    func createSession(host: SavedHost, token: String, input: CreateSessionInput) async throws -> SessionSummary {
+        let payload = CreateSessionPayload(
+            provider: input.provider.rawValue,
+            workspaceRoot: input.normalizedWorkspaceRoot,
+            title: input.normalizedTitle,
+            groupTags: input.normalizedGroupTags
+        )
+        return try await requestJSON(path: "/sessions", endpoint: host.endpoint, token: token, method: "POST", body: payload)
+    }
+
     func stopSession(sessionId: String, host: SavedHost, token: String) async throws {
         _ = try await requestText(path: "/sessions/\(sessionId)/stop", endpoint: host.endpoint, token: token, method: "POST")
     }
@@ -212,6 +222,13 @@ actor HostClient {
         configuration.timeoutIntervalForResource = 60
         return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
+}
+
+private struct CreateSessionPayload: Encodable {
+    let provider: String
+    let workspaceRoot: String
+    let title: String
+    let groupTags: [String]
 }
 
 private struct SessionGroupTagsUpdateRequest: Encodable {

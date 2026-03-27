@@ -26,6 +26,9 @@
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
 		A00000000000000000000021 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* SessionDetailView.swift */; };
+		A00000000000000000000041 /* InventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000042 /* InventoryStore.swift */; };
+		A00000000000000000000043 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000044 /* AppShellView.swift */; };
+		A00000000000000000000045 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000046 /* InventoryView.swift */; };
 		A00000000000000000000051 /* terminal.html in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004C /* terminal.html */; };
 		A00000000000000000000052 /* xterm.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004D /* xterm.js */; };
 		A00000000000000000000053 /* xterm.css in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004E /* xterm.css */; };
@@ -54,6 +57,9 @@
 		A00000000000000000000022 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A00000000000000000000023 /* VibeEverywhereIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = VibeEverywhereIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000042 /* InventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryStore.swift; sourceTree = "<group>"; };
+		A00000000000000000000044 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		A00000000000000000000046 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		A0000000000000000000004C /* terminal.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = terminal.html; sourceTree = "<group>"; };
 		A0000000000000000000004D /* xterm.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = xterm.js; sourceTree = "<group>"; };
 		A0000000000000000000004E /* xterm.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = xterm.css; sourceTree = "<group>"; };
@@ -95,6 +101,7 @@
 		A00000000000000000000028 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000044 /* AppShellView.swift */,
 				A00000000000000000000011 /* VibeEverywhereIOSApp.swift */,
 			);
 			path = App;
@@ -115,6 +122,7 @@
 				A00000000000000000000014 /* KeychainTokenStore.swift */,
 				A00000000000000000000015 /* SavedHostsStore.swift */,
 				A00000000000000000000016 /* HostClient.swift */,
+				A00000000000000000000042 /* InventoryStore.swift */,
 				A00000000000000000000017 /* TerminalEngine.swift */,
 				A00000000000000000000018 /* SessionSocket.swift */,
 				A00000000000000000000039 /* DiscoveryListener.swift */,
@@ -138,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000001D /* TerminalTextView.swift */,
+				A00000000000000000000046 /* InventoryView.swift */,
 				A0000000000000000000001E /* ConnectView.swift */,
 				A0000000000000000000001F /* PairingView.swift */,
 				A00000000000000000000020 /* SessionsView.swift */,
@@ -253,8 +262,11 @@
 				A0000000000000000000000A /* PairingViewModel.swift in Sources */,
 				A0000000000000000000000B /* SessionsViewModel.swift in Sources */,
 				A0000000000000000000000C /* SessionViewModel.swift in Sources */,
+				A00000000000000000000041 /* InventoryStore.swift in Sources */,
 				A0000000000000000000000D /* TerminalTextView.swift in Sources */,
+				A00000000000000000000043 /* AppShellView.swift in Sources */,
 				A0000000000000000000000E /* ConnectView.swift in Sources */,
+				A00000000000000000000045 /* InventoryView.swift in Sources */,
 				A0000000000000000000000F /* PairingView.swift in Sources */,
 				A00000000000000000000010 /* SessionsView.swift in Sources */,
 				A00000000000000000000021 /* SessionDetailView.swift in Sources */,

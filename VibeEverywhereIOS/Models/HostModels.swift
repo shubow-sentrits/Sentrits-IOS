@@ -294,10 +294,97 @@ struct SessionSummary: Codable, Identifiable, Hashable {
     let gitStagedCount: Int?
     let gitUntrackedCount: Int?
 
+    init(
+        sessionId: String,
+        provider: String,
+        workspaceRoot: String,
+        title: String,
+        status: String,
+        conversationId: String? = nil,
+        groupTags: [String] = [],
+        controllerKind: String,
+        controllerClientId: String? = nil,
+        isRecovered: Bool? = nil,
+        archivedRecord: Bool? = nil,
+        isActive: Bool? = nil,
+        inventoryState: String? = nil,
+        activityState: String? = nil,
+        supervisionState: String? = nil,
+        attentionState: String? = nil,
+        attentionReason: String? = nil,
+        createdAtUnixMs: Int64? = nil,
+        lastStatusAtUnixMs: Int64? = nil,
+        lastOutputAtUnixMs: Int64? = nil,
+        lastActivityAtUnixMs: Int64? = nil,
+        lastFileChangeAtUnixMs: Int64? = nil,
+        lastGitChangeAtUnixMs: Int64? = nil,
+        lastControllerChangeAtUnixMs: Int64? = nil,
+        attentionSinceUnixMs: Int64? = nil,
+        currentSequence: Int? = nil,
+        attachedClientCount: Int? = nil,
+        recentFileChangeCount: Int? = nil,
+        gitDirty: Bool? = nil,
+        gitBranch: String? = nil,
+        gitModifiedCount: Int? = nil,
+        gitStagedCount: Int? = nil,
+        gitUntrackedCount: Int? = nil
+    ) {
+        self.sessionId = sessionId
+        self.provider = provider
+        self.workspaceRoot = workspaceRoot
+        self.title = title
+        self.status = status
+        self.conversationId = conversationId
+        self.groupTags = groupTags
+        self.controllerKind = controllerKind
+        self.controllerClientId = controllerClientId
+        self.isRecovered = isRecovered
+        self.archivedRecord = archivedRecord
+        self.isActive = isActive
+        self.inventoryState = inventoryState
+        self.activityState = activityState
+        self.supervisionState = supervisionState
+        self.attentionState = attentionState
+        self.attentionReason = attentionReason
+        self.createdAtUnixMs = createdAtUnixMs
+        self.lastStatusAtUnixMs = lastStatusAtUnixMs
+        self.lastOutputAtUnixMs = lastOutputAtUnixMs
+        self.lastActivityAtUnixMs = lastActivityAtUnixMs
+        self.lastFileChangeAtUnixMs = lastFileChangeAtUnixMs
+        self.lastGitChangeAtUnixMs = lastGitChangeAtUnixMs
+        self.lastControllerChangeAtUnixMs = lastControllerChangeAtUnixMs
+        self.attentionSinceUnixMs = attentionSinceUnixMs
+        self.currentSequence = currentSequence
+        self.attachedClientCount = attachedClientCount
+        self.recentFileChangeCount = recentFileChangeCount
+        self.gitDirty = gitDirty
+        self.gitBranch = gitBranch
+        self.gitModifiedCount = gitModifiedCount
+        self.gitStagedCount = gitStagedCount
+        self.gitUntrackedCount = gitUntrackedCount
+    }
+
     var id: String { sessionId }
 
     var displayTitle: String {
-        title.isEmpty ? sessionId : title
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? sessionId : trimmed
+    }
+
+    var inventoryStateLabel: String {
+        if let inventoryState, !inventoryState.isEmpty {
+            return inventoryState
+        }
+        return status
+    }
+
+    var isEnded: Bool {
+        switch (inventoryState ?? status).lowercased() {
+        case "ended", "exited", "stopped":
+            return true
+        default:
+            return false
+        }
     }
 
     var normalizedGroupTags: [String] {
