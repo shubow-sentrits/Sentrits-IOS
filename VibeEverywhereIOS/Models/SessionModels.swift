@@ -6,8 +6,34 @@ struct SessionMetadata: Codable {
     let workspaceRoot: String
     let title: String
     let status: String
+    let conversationId: String?
+    let groupTags: [String]
     let controllerKind: String
     let controllerClientId: String?
+    let isRecovered: Bool?
+    let archivedRecord: Bool?
+    let isActive: Bool?
+    let inventoryState: String?
+    let activityState: String?
+    let supervisionState: String?
+    let attentionState: String?
+    let attentionReason: String?
+    let createdAtUnixMs: Int64?
+    let lastStatusAtUnixMs: Int64?
+    let lastOutputAtUnixMs: Int64?
+    let lastActivityAtUnixMs: Int64?
+    let lastFileChangeAtUnixMs: Int64?
+    let lastGitChangeAtUnixMs: Int64?
+    let lastControllerChangeAtUnixMs: Int64?
+    let attentionSinceUnixMs: Int64?
+    let currentSequence: Int?
+    let attachedClientCount: Int?
+    let recentFileChangeCount: Int?
+    let gitDirty: Bool?
+    let gitBranch: String?
+    let gitModifiedCount: Int?
+    let gitStagedCount: Int?
+    let gitUntrackedCount: Int?
 }
 
 enum SessionSocketEvent {
@@ -34,6 +60,61 @@ struct SessionErrorPayload: Codable {
     let sessionId: String?
     let code: String
     let message: String
+}
+
+struct SessionSnapshot: Codable {
+    let sessionId: String
+    let provider: String
+    let workspaceRoot: String
+    let title: String
+    let status: String
+    let conversationId: String?
+    let groupTags: [String]
+    let currentSequence: Int?
+    let recentTerminalTail: String?
+    let recentFileChanges: [String]
+    let signals: SessionSnapshotSignals?
+    let git: SessionSnapshotGit?
+}
+
+struct SessionSnapshotSignals: Codable {
+    let lastOutputAtUnixMs: Int64?
+    let lastActivityAtUnixMs: Int64?
+    let lastFileChangeAtUnixMs: Int64?
+    let lastGitChangeAtUnixMs: Int64?
+    let lastControllerChangeAtUnixMs: Int64?
+    let attentionSinceUnixMs: Int64?
+    let currentSequence: Int?
+    let recentFileChangeCount: Int?
+    let supervisionState: String?
+    let attentionState: String?
+    let attentionReason: String?
+    let gitDirty: Bool?
+    let gitBranch: String?
+    let gitModifiedCount: Int?
+    let gitStagedCount: Int?
+    let gitUntrackedCount: Int?
+}
+
+struct SessionSnapshotGit: Codable {
+    let branch: String?
+    let modifiedCount: Int?
+    let stagedCount: Int?
+    let untrackedCount: Int?
+    let modifiedFiles: [String]?
+    let stagedFiles: [String]?
+    let untrackedFiles: [String]?
+}
+
+struct SessionGroupTagsResponse: Codable {
+    let sessionId: String
+    let groupTags: [String]
+}
+
+enum SessionGroupTagsUpdateMode: String, Codable {
+    case add
+    case remove
+    case set
 }
 
 struct TerminalResize: Equatable {

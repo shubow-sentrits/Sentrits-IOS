@@ -15,6 +15,8 @@
 		A00000000000000000000006 /* HostClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* HostClient.swift */; };
 		A00000000000000000000007 /* TerminalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TerminalEngine.swift */; };
 		A00000000000000000000008 /* SessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* SessionSocket.swift */; };
+		A0000000000000000000003B /* DiscoveryListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* DiscoveryListener.swift */; };
+		A0000000000000000000003C /* HostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* HostsStore.swift */; };
 		A00000000000000000000009 /* ConnectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ConnectViewModel.swift */; };
 		A0000000000000000000000A /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* PairingViewModel.swift */; };
 		A0000000000000000000000B /* SessionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* SessionsViewModel.swift */; };
@@ -24,6 +26,10 @@
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
 		A00000000000000000000021 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* SessionDetailView.swift */; };
+		A00000000000000000000051 /* terminal.html in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004C /* terminal.html */; };
+		A00000000000000000000052 /* xterm.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004D /* xterm.js */; };
+		A00000000000000000000053 /* xterm.css in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004E /* xterm.css */; };
+		A00000000000000000000054 /* addon-fit.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004F /* addon-fit.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +41,8 @@
 		A00000000000000000000016 /* HostClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClient.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* TerminalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalEngine.swift; sourceTree = "<group>"; };
 		A00000000000000000000018 /* SessionSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSocket.swift; sourceTree = "<group>"; };
+		A00000000000000000000039 /* DiscoveryListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryListener.swift; sourceTree = "<group>"; };
+		A0000000000000000000003A /* HostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostsStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000019 /* ConnectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* PairingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001B /* SessionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsViewModel.swift; sourceTree = "<group>"; };
@@ -46,6 +54,10 @@
 		A00000000000000000000022 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A00000000000000000000023 /* VibeEverywhereIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = VibeEverywhereIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A0000000000000000000004C /* terminal.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = terminal.html; sourceTree = "<group>"; };
+		A0000000000000000000004D /* xterm.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = xterm.js; sourceTree = "<group>"; };
+		A0000000000000000000004E /* xterm.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = xterm.css; sourceTree = "<group>"; };
+		A0000000000000000000004F /* addon-fit.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "addon-fit.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +117,8 @@
 				A00000000000000000000016 /* HostClient.swift */,
 				A00000000000000000000017 /* TerminalEngine.swift */,
 				A00000000000000000000018 /* SessionSocket.swift */,
+				A00000000000000000000039 /* DiscoveryListener.swift */,
+				A0000000000000000000003A /* HostsStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -136,8 +150,20 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000024 /* Info.plist */,
+				A00000000000000000000050 /* Terminal */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000050 /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000004C /* terminal.html */,
+				A0000000000000000000004D /* xterm.js */,
+				A0000000000000000000004E /* xterm.css */,
+				A0000000000000000000004F /* addon-fit.js */,
+			);
+			path = Terminal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -199,6 +225,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000051 /* terminal.html in Resources */,
+				A00000000000000000000052 /* xterm.js in Resources */,
+				A00000000000000000000053 /* xterm.css in Resources */,
+				A00000000000000000000054 /* addon-fit.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +247,8 @@
 				A00000000000000000000006 /* HostClient.swift in Sources */,
 				A00000000000000000000007 /* TerminalEngine.swift in Sources */,
 				A00000000000000000000008 /* SessionSocket.swift in Sources */,
+				A0000000000000000000003B /* DiscoveryListener.swift in Sources */,
+				A0000000000000000000003C /* HostsStore.swift in Sources */,
 				A00000000000000000000009 /* ConnectViewModel.swift in Sources */,
 				A0000000000000000000000A /* PairingViewModel.swift in Sources */,
 				A0000000000000000000000B /* SessionsViewModel.swift in Sources */,
