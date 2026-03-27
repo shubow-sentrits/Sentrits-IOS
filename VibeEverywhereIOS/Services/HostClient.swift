@@ -92,6 +92,27 @@ actor HostClient {
         try await requestJSON(path: "/sessions", host: host, token: token, method: "GET")
     }
 
+    func fetchSessionSnapshot(sessionId: String, host: SavedHost, token: String) async throws -> SessionSnapshot {
+        try await requestJSON(path: "/sessions/\(sessionId)/snapshot", host: host, token: token, method: "GET")
+    }
+
+    func updateSessionGroupTags(
+        sessionId: String,
+        mode: SessionGroupTagsUpdateMode,
+        tags: [String],
+        host: SavedHost,
+        token: String
+    ) async throws -> SessionGroupTagsResponse {
+        let body = SessionGroupTagsUpdateRequest(mode: mode, tags: tags)
+        return try await requestJSON(
+            path: "/sessions/\(sessionId)/groups",
+            host: host,
+            token: token,
+            method: "POST",
+            body: body
+        )
+    }
+
     func stopSession(sessionId: String, host: SavedHost, token: String) async throws {
         _ = try await requestText(path: "/sessions/\(sessionId)/stop", host: host, token: token, method: "POST")
     }
@@ -179,4 +200,9 @@ actor HostClient {
         configuration.timeoutIntervalForResource = 60
         return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
+}
+
+private struct SessionGroupTagsUpdateRequest: Encodable {
+    let mode: SessionGroupTagsUpdateMode
+    let tags: [String]
 }
