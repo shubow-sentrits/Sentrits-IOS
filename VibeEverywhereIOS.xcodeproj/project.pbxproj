@@ -26,6 +26,10 @@
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
 		A00000000000000000000021 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* SessionDetailView.swift */; };
+		A00000000000000000000048 /* terminal.html in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* terminal.html */; };
+		A00000000000000000000049 /* xterm.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* xterm.js */; };
+		A0000000000000000000004A /* xterm.css in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003B /* xterm.css */; };
+		A0000000000000000000004B /* addon-fit.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003C /* addon-fit.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +54,10 @@
 		A00000000000000000000022 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A00000000000000000000023 /* VibeEverywhereIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = VibeEverywhereIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000039 /* terminal.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = terminal.html; sourceTree = "<group>"; };
+		A0000000000000000000003A /* xterm.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = xterm.js; sourceTree = "<group>"; };
+		A0000000000000000000003B /* xterm.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = xterm.css; sourceTree = "<group>"; };
+		A0000000000000000000003C /* addon-fit.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "addon-fit.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,8 +150,20 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000024 /* Info.plist */,
+				A0000000000000000000003D /* Terminal */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000003D /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000039 /* terminal.html */,
+				A0000000000000000000003A /* xterm.js */,
+				A0000000000000000000003B /* xterm.css */,
+				A0000000000000000000003C /* addon-fit.js */,
+			);
+			path = Terminal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -205,6 +225,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000048 /* terminal.html in Resources */,
+				A00000000000000000000049 /* xterm.js in Resources */,
+				A0000000000000000000004A /* xterm.css in Resources */,
+				A0000000000000000000004B /* addon-fit.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
