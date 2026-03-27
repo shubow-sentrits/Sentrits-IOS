@@ -1,37 +1,87 @@
-# iOS MVP Notes
+# VibeEverywhere iOS Notes
 
-## Current status
+## Status
 
-The app builds as a minimal iPhone-first SwiftUI client and covers this path:
+This repo is **not** the current product shape yet.
 
-1. enter a host and port
-2. check `GET /health` and `GET /host/info`
-3. start pairing and display the returned pairing code
-4. paste and validate a bearer token
-5. save hosts and tokens locally
-6. list authenticated sessions
-7. attach to a session over WebSocket
-8. observe live terminal output
-9. request and release control
-10. send terminal input
-11. send terminal resize updates
-12. show disconnected and exited states
+It contains an older SwiftUI MVP that proved basic connectivity, but it does not match the current runtime model or the new UI direction.
 
-## Intentional limitations
+The real target is now:
 
-- Pairing completion is manual for now.
-  - The current daemon contract exposes `POST /pairing/request` and host-admin approval, but it does not expose a remote client endpoint for the requester to poll or claim the approved token.
-  - The app therefore shows the pairing code and expects the token returned by the host admin UI to be pasted into the iPhone client.
-- Terminal rendering uses a narrow native abstraction.
-  - PTY bytes are base64-decoded and rendered as lossy UTF-8 text.
-  - Basic ANSI CSI escape sequences are stripped instead of fully interpreted.
-  - This keeps the transport contract correct while leaving the rendering layer easy to replace later.
-- Input is a plain text field, not a full mobile terminal keyboard.
-- Session creation, file views, git views, discovery, and settings polish are intentionally omitted from this first slice.
+- Pairing
+- Inventory
+- Explorer
+- Activity
+- Focused session view
 
-## Replacement seams
+with true native UDP discovery and a better terminal renderer.
 
-- `HostClient` isolates REST calls.
-- `SessionSocket` isolates WebSocket attach/events/commands.
-- `TerminalEngine` isolates terminal decoding/rendering so a better renderer can replace it later.
-- `SavedHostsStore` and `KeychainTokenStore` keep persistence out of the UI layer.
+## What Still Has Value
+
+These parts are useful foundations:
+
+- `HostClient.swift`
+- `SessionSocket.swift`
+- `SavedHostsStore.swift`
+- `KeychainTokenStore.swift`
+
+They should be treated as reusable building blocks, not proof that the current app structure is correct.
+
+## What Is Outdated
+
+The current UI/view-model structure is still from the old MVP:
+
+- form-heavy connect flow
+- old sessions list/detail flow
+- lossy text terminal rendering
+- no grouped inventory
+- no explorer workspace
+- no activity tab
+- no true discovery flow
+
+## Current Runtime Alignment
+
+The runtime now supports:
+
+- UDP discovery broadcast
+- `GET /discovery/info`
+- pairing request + claim
+- session list/create/stop
+- group tags
+- overview and session websockets
+- read-only snapshot/file/tail access
+
+That means the iOS client can now be built as a real first-class native client.
+
+## Implementation Direction
+
+The rebuild should use:
+
+- modern SwiftUI
+- `NavigationStack` and data-driven navigation
+- store-driven state instead of screen-local networking
+- native UDP discovery
+- a real terminal rendering path
+
+## Design Source
+
+The current visual direction lives in:
+
+- `UI_design/vibeops_atmospheric/DESIGN.md`
+- `UI_design/pairing`
+- `UI_design/inventory`
+- `UI_design/explorer`
+- `UI_design/interactive_terminal_view`
+- `UI_design/activity_log`
+
+## Reference
+
+For discovery and pairing behavior only, use:
+
+- `/Users/shubow/dev/moonlight-ios`
+
+Use it as a network-behavior reference, not as a UI or architecture template.
+
+## Next Step
+
+Treat this repo as a rebuild target, not as a nearly-finished app.

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800;900&amp;family=Space+Grotesk:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-tertiary-fixed-variant": "#636766",
+            "tertiary-dim": "#e9ecea",
+            "background": "#0c0e10",
+            "on-tertiary-fixed": "#464a49",
+            "error": "#ee7d77",
+            "on-secondary": "#563e00",
+            "on-primary-container": "#c7d892",
+            "secondary-container": "#4e3800",
+            "on-tertiary": "#5c605f",
+            "on-primary": "#38450f",
+            "tertiary-fixed-dim": "#e3e6e4",
+            "primary-fixed": "#d9eaa3",
+            "primary-fixed-dim": "#cbdc96",
+            "on-primary-fixed": "#37440e",
+            "tertiary-fixed": "#f1f4f2",
+            "on-secondary-fixed-variant": "#765600",
+            "on-secondary-fixed": "#523c00",
+            "error-container": "#7f2927",
+            "inverse-primary": "#56652c",
+            "surface-container-lowest": "#000000",
+            "surface-tint": "#bdce89",
+            "secondary-fixed": "#ffdfa0",
+            "on-error": "#490106",
+            "primary": "#bdce89",
+            "inverse-on-surface": "#535557",
+            "on-tertiary-container": "#545856",
+            "on-secondary-container": "#f2b500",
+            "primary-dim": "#afc07d",
+            "error-dim": "#bb5551",
+            "surface-container-highest": "#20262c",
+            "primary-container": "#3e4c16",
+            "secondary": "#ffbf00",
+            "on-surface": "#e0e6ed",
+            "on-primary-fixed-variant": "#536129",
+            "outline-variant": "#42494e",
+            "on-background": "#e0e6ed",
+            "surface-container-high": "#1b2025",
+            "on-surface-variant": "#a6acb2",
+            "secondary-fixed-dim": "#ffcd62",
+            "tertiary": "#f7faf8",
+            "on-error-container": "#ff9993",
+            "surface-container": "#161a1e",
+            "surface-variant": "#20262c",
+            "surface-container-low": "#111416",
+            "tertiary-container": "#e9ecea",
+            "secondary-dim": "#eeb200",
+            "inverse-surface": "#f9f9fc",
+            "outline": "#70767c",
+            "surface-bright": "#252d33",
+            "surface": "#0c0e10",
+            "surface-dim": "#0c0e10"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Space Grotesk"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #42494e26;
+      border-radius: 10px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 antialiased overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="bg-[#0c0e10] sticky top-0 z-50 flex justify-between items-center w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<button class="text-[#bdce89] hover:bg-[#20262c] transition-colors duration-300 p-2 rounded-xl active:scale-95 duration-300 ease-in-out">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="text-[#bdce89] font-['Manrope'] font-black tracking-widest uppercase text-xl">VibeOps</h1>
+</div>
+<button class="text-[#bdce89] hover:bg-[#20262c] transition-colors duration-300 p-2 rounded-xl active:scale-95 duration-300 ease-in-out">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+</header>
+<main class="max-w-4xl mx-auto px-6 pt-8 pb-32">
+<!-- Header Section -->
+<section class="mb-10">
+<div class="flex flex-col gap-1">
+<span class="font-label text-secondary text-sm tracking-wider uppercase">System Stream</span>
+<h2 class="font-headline font-extrabold text-4xl text-on-surface tracking-tight">Activity</h2>
+</div>
+<!-- Summary Stats (Editorial Layout) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-on-surface-variant text-xs mb-1">Total Events</p>
+<p class="font-headline font-bold text-xl text-primary">1,284</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-on-surface-variant text-xs mb-1">Uptime</p>
+<p class="font-headline font-bold text-xl text-on-surface">99.9%</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-on-surface-variant text-xs mb-1">Active Hosts</p>
+<p class="font-headline font-bold text-xl text-secondary">08</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-on-surface-variant text-xs mb-1">Health Score</p>
+<p class="font-headline font-bold text-xl text-on-primary-container">Optimum</p>
+</div>
+</div>
+</section>
+<!-- Activity Log List -->
+<section class="relative">
+<!-- Topography divider replacement (spacing and tonal shifts) -->
+<div class="space-y-4">
+<!-- Today Group -->
+<div class="flex items-center gap-4 mb-6">
+<span class="font-label text-xs font-medium text-on-surface-variant/60 tracking-[0.2em] uppercase">Today — June 24</span>
+<div class="h-[1px] flex-grow bg-surface-container-highest"></div>
+</div>
+<!-- Activity Item 1 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-2xl flex items-start gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">sync_alt</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-lg">Session Connected: Project Alpha</h3>
+<span class="font-label text-xs text-on-surface-variant">14:02:12</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1 leading-relaxed">Stable tunnel established via US-West-1 node. Low latency protocol engaged.</p>
+<div class="flex gap-2 mt-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-label font-medium text-primary uppercase">Success</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-label font-medium text-on-surface-variant uppercase">Node-04</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 2 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-2xl flex items-start gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-xl">dns</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-lg">New Host Added: PC-Tower</h3>
+<span class="font-label text-xs text-on-surface-variant">13:45:00</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1 leading-relaxed">Hardware fingerprint verified. Environmental sync initiated for workstation-02.</p>
+<div class="flex gap-2 mt-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-label font-medium text-secondary uppercase">Provisioning</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 3 (Warning Case) -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-2xl flex items-start gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-error-container/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-lg">Authentication Retry: API-Gateway</h3>
+<span class="font-label text-xs text-on-surface-variant">12:30:11</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1 leading-relaxed">Third-party service returned 401. Automatic secret rotation scheduled.</p>
+<div class="flex gap-2 mt-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-label font-medium text-error uppercase">Alert</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 4 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-2xl flex items-start gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">commit</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-lg">Git Commit: +12 files in Dev-Tools</h3>
+<span class="font-label text-xs text-on-surface-variant">11:15:44</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1 leading-relaxed">Merged feature/terminal-ui branch into production. Checksum validated.</p>
+<div class="flex gap-2 mt-3">
+<span class="font-label text-[10px] text-on-primary-container bg-primary-container/30 px-2 py-1 rounded">SHA: f42e91</span>
+</div>
+</div>
+</div>
+<!-- Yesterday Group -->
+<div class="flex items-center gap-4 mt-12 mb-6">
+<span class="font-label text-xs font-medium text-on-surface-variant/60 tracking-[0.2em] uppercase">Yesterday — June 23</span>
+<div class="h-[1px] flex-grow bg-surface-container-highest"></div>
+</div>
+<!-- Activity Item 5 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-2xl flex items-start gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">settings_remote</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-lg">Remote Execution: Cleanup Hook</h3>
+<span class="font-label text-xs text-on-surface-variant">22:00:00</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1 leading-relaxed">Nightly cache purge completed across all active clusters. Freed 4.2GB.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Empty State / End of Log (Asymmetric Decorative Element) -->
+<div class="mt-16 flex flex-col items-center justify-center opacity-40">
+<div class="w-px h-12 bg-gradient-to-b from-primary to-transparent mb-4"></div>
+<p class="font-label text-[10px] uppercase tracking-[0.3em]">End of Log Stream</p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#111416]/80 backdrop-blur-xl fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] rounded-t-3xl">
+<a class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">sync_alt</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Pairing</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Inventory</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Explorer</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#bdce89] scale-110 transition-transform active:scale-90 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide mt-1">Activity</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VibeOps - Project Alpha</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800;900&amp;family=Space+Grotesk:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#636766",
+              "tertiary-dim": "#e9ecea",
+              "background": "#0c0e10",
+              "on-tertiary-fixed": "#464a49",
+              "error": "#ee7d77",
+              "on-secondary": "#563e00",
+              "on-primary-container": "#c7d892",
+              "secondary-container": "#4e3800",
+              "on-tertiary": "#5c605f",
+              "on-primary": "#38450f",
+              "tertiary-fixed-dim": "#e3e6e4",
+              "primary-fixed": "#d9eaa3",
+              "primary-fixed-dim": "#cbdc96",
+              "on-primary-fixed": "#37440e",
+              "tertiary-fixed": "#f1f4f2",
+              "on-secondary-fixed-variant": "#765600",
+              "on-secondary-fixed": "#523c00",
+              "error-container": "#7f2927",
+              "inverse-primary": "#56652c",
+              "surface-container-lowest": "#000000",
+              "surface-tint": "#bdce89",
+              "secondary-fixed": "#ffdfa0",
+              "on-error": "#490106",
+              "primary": "#bdce89",
+              "inverse-on-surface": "#535557",
+              "on-tertiary-container": "#545856",
+              "on-secondary-container": "#f2b500",
+              "primary-dim": "#afc07d",
+              "error-dim": "#bb5551",
+              "surface-container-highest": "#20262c",
+              "primary-container": "#3e4c16",
+              "secondary": "#ffbf00",
+              "on-surface": "#e0e6ed",
+              "on-primary-fixed-variant": "#536129",
+              "outline-variant": "#42494e",
+              "on-background": "#e0e6ed",
+              "surface-container-high": "#1b2025",
+              "on-surface-variant": "#a6acb2",
+              "secondary-fixed-dim": "#ffcd62",
+              "tertiary": "#f7faf8",
+              "on-error-container": "#ff9993",
+              "surface-container": "#161a1e",
+              "surface-variant": "#20262c",
+              "surface-container-low": "#111416",
+              "tertiary-container": "#e9ecea",
+              "secondary-dim": "#eeb200",
+              "inverse-surface": "#f9f9fc",
+              "outline": "#70767c",
+              "surface-bright": "#252d33",
+              "surface": "#0c0e10",
+              "surface-dim": "#0c0e10"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .terminal-glow {
+            box-shadow: inset 0 0 40px rgba(189, 206, 137, 0.05);
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .kbd-btn {
+            @apply flex items-center justify-center bg-surface-container-high text-on-surface-variant rounded-lg font-label text-[10px] px-3 py-1.5 border border-outline-variant/10 active:bg-primary-container active:text-primary transition-all uppercase tracking-tighter whitespace-nowrap;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-[#0c0e10] flex justify-between items-center w-full px-6 py-4 fixed top-0 z-50">
+<div class="flex items-center gap-4">
+<button class="text-[#e0e6ed]/60 hover:bg-[#20262c] p-2 rounded-full transition-colors duration-300 active:scale-95">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-['Manrope'] font-bold tracking-tight text-xl text-[#bdce89]">Project Alpha</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-['Space+Grotesk'] text-[10px] text-secondary px-2 py-0.5 rounded-full border border-secondary/20 uppercase tracking-widest">Live</span>
+<button class="text-[#bdce89] hover:bg-[#20262c] p-2 rounded-full transition-colors duration-300 active:scale-95">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</header>
+<main class="flex-grow pt-20 pb-4 px-4 flex flex-col gap-4 overflow-hidden h-screen">
+<!-- Terminal Container - Slightly Shrunk for Input Area -->
+<section class="relative h-[45%] bg-surface-container-lowest rounded-xl overflow-hidden terminal-glow border border-outline-variant/10">
+<!-- Terminal Header -->
+<div class="absolute top-0 left-0 w-full flex items-center justify-between px-4 py-2 bg-surface-bright/60 backdrop-blur-xl z-10">
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
+</div>
+<div class="font-label text-[10px] text-on-surface-variant tracking-widest uppercase">ssh: 192.168.1.104</div>
+<div class="w-10"></div>
+</div>
+<!-- Terminal Content -->
+<div class="h-full pt-10 pb-6 px-4 overflow-y-auto hide-scrollbar font-label text-sm leading-relaxed text-on-surface/90">
+<div class="mb-2 text-primary-dim">vibeops@alpha:~$ <span class="text-on-surface">npm start monitor --verbose</span></div>
+<div class="text-on-surface-variant/80 italic mb-4">&gt; Initializing connection to node cluster...</div>
+<div class="flex flex-col gap-1 mb-6">
+<div class="flex justify-between">
+<span>[READY] Socket connection established</span>
+<span class="text-primary">2ms</span>
+</div>
+<div class="flex justify-between">
+<span>[FETCH] Synchronizing local manifest</span>
+<span class="text-primary">142ms</span>
+</div>
+<div class="flex justify-between">
+<span>[WARN] Deprecated dependency in /lib/core</span>
+<span class="text-secondary">#771b</span>
+</div>
+</div>
+<div class="mb-2 text-primary-dim">vibeops@alpha:~$ <span class="text-on-surface">git checkout production</span></div>
+<div class="text-on-surface-variant/80 mb-4">Switched to branch 'production'</div>
+<div class="mb-2 text-primary-dim">vibeops@alpha:~$ <span class="text-on-surface">tail -f logs/session.log</span></div>
+<div class="space-y-1 opacity-60">
+<div>14:22:01 INFO: Handshake success [uid: 882]</div>
+<div>14:22:05 DEBUG: Latency spike detected (+12ms)</div>
+<div>14:22:09 INFO: Packet integrity 99.9%</div>
+<div>14:22:15 INFO: Buffer cleared</div>
+</div>
+<!-- Cursor -->
+<div class="flex items-center gap-1 mt-2">
+<span class="text-primary-dim">vibeops@alpha:~$</span>
+<div class="w-2 h-4 bg-primary animate-pulse"></div>
+</div>
+</div>
+</section>
+<!-- Bottom Section: Metadata & Controls -->
+<section class="flex-grow flex flex-col gap-4 overflow-hidden">
+<!-- Asymmetric Grid for Info -->
+<div class="grid grid-cols-12 gap-3 shrink-0">
+<!-- Recent Files -->
+<div class="col-span-7 bg-surface-container rounded-xl p-3 flex flex-col overflow-hidden max-h-32">
+<div class="flex items-center justify-between mb-2">
+<span class="font-headline text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Recent Files</span>
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="folder">folder</span>
+</div>
+<div class="space-y-1 overflow-y-auto hide-scrollbar">
+<div class="flex items-center gap-2 px-2 py-1 bg-surface-container-high rounded-lg">
+<span class="material-symbols-outlined text-primary text-xs" data-icon="description">description</span>
+<span class="font-label text-[10px] truncate">config.yaml</span>
+</div>
+<div class="flex items-center gap-2 px-2 py-1 hover:bg-surface-container-high rounded-lg transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-xs" data-icon="javascript">javascript</span>
+<span class="font-label text-[10px] truncate">main.bundle.js</span>
+</div>
+</div>
+</div>
+<!-- Session Stats & Power -->
+<div class="col-span-5 flex flex-col gap-2">
+<div class="bg-surface-container rounded-xl p-3 flex-grow flex flex-col justify-center items-center text-center">
+<div class="text-[9px] font-label text-on-surface-variant mb-0.5">UPTIME</div>
+<div class="font-headline font-bold text-sm text-on-surface">04:12:09</div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<button class="bg-surface-container rounded-xl h-10 flex items-center justify-center hover:bg-primary-container group transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-sm group-hover:text-primary" data-icon="restart_alt">restart_alt</span>
+</button>
+<button class="bg-surface-container rounded-xl h-10 flex items-center justify-center hover:bg-error-container group transition-all">
+<span class="material-symbols-outlined text-error text-sm" data-icon="power_settings_new">power_settings_new</span>
+</button>
+</div>
+</div>
+</div>
+<!-- New Functional Terminal Interface Area -->
+<div class="flex flex-col gap-3 mt-auto">
+<!-- Control Strips -->
+<div class="overflow-x-auto hide-scrollbar -mx-4 px-4">
+<div class="flex items-center gap-4 min-w-max pb-1">
+<!-- Group 1: Navigation -->
+<div class="flex gap-1.5 p-1 bg-surface-container/50 rounded-xl border border-outline-variant/5">
+<button class="kbd-btn"><span class="material-symbols-outlined text-sm" data-icon="keyboard_arrow_up">keyboard_arrow_up</span></button>
+<button class="kbd-btn"><span class="material-symbols-outlined text-sm" data-icon="keyboard_arrow_down">keyboard_arrow_down</span></button>
+<button class="kbd-btn"><span class="material-symbols-outlined text-sm" data-icon="keyboard_arrow_left">keyboard_arrow_left</span></button>
+<button class="kbd-btn"><span class="material-symbols-outlined text-sm" data-icon="keyboard_arrow_right">keyboard_arrow_right</span></button>
+<button class="kbd-btn min-w-[32px]">Tab</button>
+</div>
+<!-- Group 2: Modifiers -->
+<div class="flex gap-1.5 p-1 bg-surface-container/50 rounded-xl border border-outline-variant/5">
+<button class="kbd-btn">Ctrl</button>
+<button class="kbd-btn">Alt</button>
+<button class="kbd-btn">Esc</button>
+<button class="kbd-btn">Shift</button>
+</div>
+<!-- Group 3: Shortcuts -->
+<div class="flex gap-1.5 p-1 bg-surface-container/50 rounded-xl border border-outline-variant/5">
+<button class="kbd-btn text-error/80">^C</button>
+<button class="kbd-btn text-error/80">^D</button>
+<button class="kbd-btn">^Z</button>
+<button class="kbd-btn">Clear</button>
+</div>
+</div>
+</div>
+<!-- Command Input Area -->
+<div class="relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl blur opacity-30 group-focus-within:opacity-100 transition duration-500"></div>
+<div class="relative flex items-end bg-surface-container-high rounded-xl border border-outline-variant/20 p-2 gap-2 shadow-2xl">
+<span class="text-primary-dim font-label text-sm mb-2 ml-2 select-none">$</span>
+<textarea class="flex-grow bg-transparent border-none text-on-surface font-label text-sm focus:ring-0 placeholder:text-on-surface-variant/40 py-2 resize-none max-h-32 hide-scrollbar" placeholder="Type a command..." rows="1"></textarea>
+<button class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors mb-0.5 active:scale-90">
+<span class="material-symbols-outlined text-[20px]" data-icon="keyboard_return">keyboard_return</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Ambient background element -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-primary/5 blur-[120px] -z-10 pointer-events-none"></div>
+</body></html>

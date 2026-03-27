@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VibeOps Explorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800;900&amp;family=Space+Grotesk:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-fixed-variant": "#636766",
+                        "tertiary-dim": "#e9ecea",
+                        "background": "#0c0e10",
+                        "on-tertiary-fixed": "#464a49",
+                        "error": "#ee7d77",
+                        "on-secondary": "#563e00",
+                        "on-primary-container": "#c7d892",
+                        "secondary-container": "#4e3800",
+                        "on-tertiary": "#5c605f",
+                        "on-primary": "#38450f",
+                        "tertiary-fixed-dim": "#e3e6e4",
+                        "primary-fixed": "#d9eaa3",
+                        "primary-fixed-dim": "#cbdc96",
+                        "on-primary-fixed": "#37440e",
+                        "tertiary-fixed": "#f1f4f2",
+                        "on-secondary-fixed-variant": "#765600",
+                        "on-secondary-fixed": "#523c00",
+                        "error-container": "#7f2927",
+                        "inverse-primary": "#56652c",
+                        "surface-container-lowest": "#000000",
+                        "surface-tint": "#bdce89",
+                        "secondary-fixed": "#ffdfa0",
+                        "on-error": "#490106",
+                        "primary": "#bdce89",
+                        "inverse-on-surface": "#535557",
+                        "on-tertiary-container": "#545856",
+                        "on-secondary-container": "#f2b500",
+                        "primary-dim": "#afc07d",
+                        "error-dim": "#bb5551",
+                        "surface-container-highest": "#20262c",
+                        "primary-container": "#3e4c16",
+                        "secondary": "#ffbf00",
+                        "on-surface": "#e0e6ed",
+                        "on-primary-fixed-variant": "#536129",
+                        "outline-variant": "#42494e",
+                        "on-background": "#e0e6ed",
+                        "surface-container-high": "#1b2025",
+                        "on-surface-variant": "#a6acb2",
+                        "secondary-fixed-dim": "#ffcd62",
+                        "tertiary": "#f7faf8",
+                        "on-error-container": "#ff9993",
+                        "surface-container": "#161a1e",
+                        "surface-variant": "#20262c",
+                        "surface-container-low": "#111416",
+                        "tertiary-container": "#e9ecea",
+                        "secondary-dim": "#eeb200",
+                        "inverse-surface": "#f9f9fc",
+                        "outline": "#70767c",
+                        "surface-bright": "#252d33",
+                        "surface": "#0c0e10",
+                        "surface-dim": "#0c0e10"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .terminal-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(189, 206, 137, 0.1);
+            border-radius: 10px;
+        }
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(32, 38, 44, 0.6);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#0c0e10] dark:bg-[#0c0e10] fixed top-0 w-full z-50">
+<div class="flex justify-between items-center w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<button class="text-[#bdce89] hover:bg-[#20262c] transition-colors duration-300 p-2 rounded-lg">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-['Manrope'] font-black tracking-widest uppercase text-[#bdce89]">VibeOps</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-['Manrope'] font-bold tracking-tight text-xl text-[#bdce89]">Explorer</span>
+<button class="text-[#bdce89] hover:bg-[#20262c] transition-colors duration-300 p-2 rounded-lg">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-20 px-6 max-w-7xl mx-auto">
+<!-- Filter Tabs / Tags -->
+<section class="mb-8 overflow-x-auto">
+<div class="flex gap-3 py-2">
+<button class="px-6 py-2 rounded-full bg-primary text-on-primary font-label text-sm transition-all duration-300 shadow-lg shadow-primary/10">
+                    All
+                </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-all duration-300">
+                    Workspace
+                </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-all duration-300">
+                    Dev
+                </button>
+<button class="px-6 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-all duration-300">
+                    Admin
+                </button>
+</div>
+</section>
+<!-- Session Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Terminal Tile 1 -->
+<div class="group surface-container bg-surface-container p-5 rounded-xl transition-all duration-300 hover:bg-surface-container-high relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">edge-proxy-alpha</h3>
+<p class="font-label text-xs text-on-surface-variant mt-1">prod-cluster-us-east</p>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-primary mt-1.5 animate-pulse"></span>
+<span class="material-symbols-outlined text-primary text-xl">terminal</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 font-label text-[11px] leading-relaxed text-primary/80 terminal-scroll overflow-hidden h-24 border border-outline-variant/10">
+<div class="opacity-100">$ vibe-ops monitor --verbose</div>
+<div class="opacity-70">[INFO] Connection established: 10.0.4.12</div>
+<div class="opacity-50">[DEBUG] Handshake complete (24ms)</div>
+<div class="opacity-30">[WARN] Latency jitter detected: 140ms</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a developer with glasses in warm studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBr0dENBBeccyY5ASRfuC7tftt_deO1t6wxF5AHkD1khChFt4gtDcTsdZP-hBGCJ6ooS64UqxMpj6hpJYorMPNGxQCnrUp1Gr6dRCim6jP6Ot8Wf3IWbr27ckbP7xLGS9TjsSk7n7-BIK51WCThTELjUHpIMSFmkaesNkWnouB8DFTaGluHFneXPpgRBqZvs9I3r8YpSU-9lmtWDCf0FDpO8o31v5NfpDw0SJUaE26CflB6EgTY8iMHs7JMwOsULL7JuIdsSdnhQlD"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="minimalist avatar of a person with a creative background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlx2HlF-WrWwnbpMS7yAvi03Rf_t1HVFu59cbZF6AX1DgaCUMPDg4OkQpXX8LJgDP1N7Z4NWDDTFGXZMrPj8r6XhJWtIJn8_ldj5B4TqEXVmQrWuLlh6VJ3aclufVft1vKkcX4rTR6DZiIx3lCr0iLoypusbPFOfftk6JckhmT1JkD-R3jetKfzR5G3_jvPYD7PzuUH-zg1VSEl_-EmiunXoidIfdO7k76tlk3GV0b-xiG3irvR2D_RO1EMxAa8iS3DJ43ihQrt2D2"/>
+</div>
+</div>
+<button class="text-on-surface-variant group-hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Terminal Tile 2 -->
+<div class="group surface-container bg-surface-container p-5 rounded-xl transition-all duration-300 hover:bg-surface-container-high relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">db-sync-service</h3>
+<p class="font-label text-xs text-on-surface-variant mt-1">staging-db-replica</p>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary mt-1.5"></span>
+<span class="material-symbols-outlined text-secondary text-xl">database</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 font-label text-[11px] leading-relaxed text-secondary/80 terminal-scroll overflow-hidden h-24 border border-outline-variant/10">
+<div class="opacity-100">$ yarn run sync:validate</div>
+<div class="opacity-70">Validating 1,429 records...</div>
+<div class="opacity-50">Checking consistency across 4 shards</div>
+<div class="opacity-30">Waiting for response from replica...</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="font-label text-[10px] text-on-surface-variant px-2 py-0.5 rounded-full bg-surface-container-highest">Sync 92%</span>
+</div>
+<button class="text-on-surface-variant group-hover:text-secondary transition-colors duration-300">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Terminal Tile 3 -->
+<div class="group surface-container bg-surface-container p-5 rounded-xl transition-all duration-300 hover:bg-surface-container-high relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">auth-kernel-v4</h3>
+<p class="font-label text-xs text-on-surface-variant mt-1">security-sandbox</p>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-error mt-1.5"></span>
+<span class="material-symbols-outlined text-error text-xl">shield_lock</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 font-label text-[11px] leading-relaxed text-error/80 terminal-scroll overflow-hidden h-24 border border-outline-variant/10">
+<div class="opacity-100">$ security-audit --strict</div>
+<div class="opacity-70">[CRITICAL] Invalid JWT signature in segment 3</div>
+<div class="opacity-50">[FAIL] Session hijack mitigation test</div>
+<div class="opacity-30">[RETRY] Re-establishing handshake...</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="font-label text-[10px] text-error px-2 py-0.5 rounded-full bg-error-container/20">Audit Failed</span>
+</div>
+<button class="text-on-surface-variant group-hover:text-error transition-colors duration-300">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Terminal Tile 4 -->
+<div class="group surface-container bg-surface-container p-5 rounded-xl transition-all duration-300 hover:bg-surface-container-high relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">cdn-node-09</h3>
+<p class="font-label text-xs text-on-surface-variant mt-1">global-edge-network</p>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-primary mt-1.5"></span>
+<span class="material-symbols-outlined text-primary text-xl">cloud_queue</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 font-label text-[11px] leading-relaxed text-on-surface/60 terminal-scroll overflow-hidden h-24 border border-outline-variant/10">
+<div class="opacity-100">Watching /var/log/nginx/access.log</div>
+<div class="opacity-70">GET /assets/main.js 200 (HIT)</div>
+<div class="opacity-50">GET /api/v1/user 304 (MISS)</div>
+<div class="opacity-30">PURGE /cache/landing-page...</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center gap-2 text-on-surface-variant font-label text-[10px]">
+<span class="material-symbols-outlined text-xs">schedule</span> 2m ago
+                    </div>
+<button class="text-on-surface-variant group-hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Terminal Tile 5 -->
+<div class="group surface-container bg-surface-container p-5 rounded-xl transition-all duration-300 hover:bg-surface-container-high relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">image-processor</h3>
+<p class="font-label text-xs text-on-surface-variant mt-1">worker-pool-heavy</p>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-primary mt-1.5 animate-pulse"></span>
+<span class="material-symbols-outlined text-primary text-xl">photo_filter</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 font-label text-[11px] leading-relaxed text-primary/80 terminal-scroll overflow-hidden h-24 border border-outline-variant/10">
+<div class="opacity-100">Processing job_id: f7a2-991x</div>
+<div class="opacity-70">Resizing 4000x3000 -&gt; 800x600...</div>
+<div class="opacity-50">Applying 'Soft Minimalism' filter</div>
+<div class="opacity-30">Uploading to S3 (9.4 MB/s)...</div>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="font-label text-[10px] text-on-surface-variant px-2 py-0.5 rounded-full bg-surface-container-highest">GPU Bound</span>
+</div>
+<button class="text-on-surface-variant group-hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Terminal Tile 6 - Empty State Action -->
+<div class="border-2 border-dashed border-outline-variant/20 rounded-xl flex flex-col items-center justify-center p-8 gap-4 hover:border-primary/40 transition-all duration-500 hover:bg-surface-container-low cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">add</span>
+</div>
+<div class="text-center">
+<p class="font-headline font-bold text-on-surface">New Session</p>
+<p class="font-label text-xs text-on-surface-variant mt-1">Connect to cluster or node</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#111416]/80 backdrop-blur-xl dark:bg-[#111416]/80 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] rounded-t-3xl">
+<div class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300">
+<span class="material-symbols-outlined">sync_alt</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide">Pairing</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide">Inventory</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#bdce89] scale-110 transition-transform active:scale-90">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide">Explorer</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#e0e6ed]/40 hover:text-[#bdce89]/80 active:scale-90 transition-all duration-300">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] font-medium text-[10px] tracking-wide">Activity</span>
+</div>
+</nav>
+<!-- FAB (Suppressed on Explorer according to rules, but keeping context check: Explorer is a home destination, so it stays as per "Primary ecosystem" rule) -->
+<div class="fixed right-6 bottom-32 z-40">
+<button class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-container text-on-primary flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95 transition-all duration-300">
+<span class="material-symbols-outlined text-2xl">terminal</span>
+</button>
+</div>
+</body></html>
