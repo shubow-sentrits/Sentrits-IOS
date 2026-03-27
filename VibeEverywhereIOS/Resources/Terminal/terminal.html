@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Vibe Terminal</title>
+  <link rel="stylesheet" href="xterm.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #231b16;
+      --fg: #f8e9d5;
+      --cursor: #f0b061;
+      --selection: rgba(240, 176, 97, 0.28);
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top, rgba(255, 201, 134, 0.1), transparent 38%),
+        linear-gradient(180deg, #2b211b 0%, #1c1512 100%);
+      font-family: "SF Mono", Menlo, monospace;
+    }
+
+    #terminal {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+    }
+
+    .xterm {
+      height: 100%;
+    }
+
+    .xterm-viewport {
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script src="xterm.js"></script>
+  <script src="addon-fit.js"></script>
+  <script>
+    const host = document.getElementById('terminal');
+    const terminal = new Terminal({
+      allowTransparency: true,
+      convertEol: false,
+      cursorBlink: false,
+      cursorStyle: 'block',
+      fontFamily: 'SF Mono, Menlo, monospace',
+      fontSize: 14,
+      scrollback: 5000,
+      theme: {
+        background: '#231b16',
+        foreground: '#f8e9d5',
+        cursor: '#f0b061',
+        selectionBackground: 'rgba(240, 176, 97, 0.28)'
+      }
+    });
+    const fitAddon = new FitAddon.FitAddon();
+    let inputEnabled = false;
+
+    terminal.loadAddon(fitAddon);
+    terminal.open(host);
+
+    function postMessage(name, payload) {
+      const handler = window.webkit?.messageHandlers?.[name];
+      if (handler) {
+        handler.postMessage(payload);
+      }
+    }
+
+    function fitAndReport() {
+      fitAddon.fit();
+      postMessage('terminalResize', { cols: terminal.cols, rows: terminal.rows });
+    }
+
+    function decodeBase64(base64) {
+      const raw = atob(base64);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i += 1) {
+        bytes[i] = raw.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    function setMode(payload) {
+      inputEnabled = !!payload.inputEnabled;
+      terminal.options.disableStdin = !inputEnabled;
+      terminal.options.cursorBlink = payload.mode === 'focused' && inputEnabled;
+      terminal.options.fontSize = payload.mode === 'focused' ? 14 : 11;
+      requestAnimationFrame(fitAndReport);
+    }
+
+    terminal.onData((data) => {
+      if (inputEnabled) {
+        postMessage('terminalInput', data);
+      }
+    });
+
+    new ResizeObserver(() => {
+      fitAndReport();
+    }).observe(host);
+
+    window.vibeTerminal = {
+      setMode,
+      reset() {
+        terminal.reset();
+        fitAndReport();
+      },
+      appendBase64Chunks(chunks) {
+        for (const chunk of chunks) {
+          terminal.write(decodeBase64(chunk));
+        }
+      }
+    };
+
+    fitAndReport();
+    postMessage('terminalReady', 'ready');
+  </script>
+</body>
+</html>

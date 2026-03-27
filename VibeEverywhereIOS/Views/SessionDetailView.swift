@@ -75,12 +75,29 @@ struct SessionDetailView: View {
     }
 
     private var terminalPanel: some View {
-        GeometryReader { geometry in
-            TerminalTextView(text: viewModel.terminal.renderedText)
-                .task(id: geometry.size) {
-                    let resize = computeResize(size: geometry.size)
-                    await viewModel.sendResizeIfChanged(resize)
+        ZStack {
+            TerminalTextView(
+                terminal: viewModel.terminal,
+                mode: .focused,
+                isInputEnabled: viewModel.canSendInput,
+                onInput: { data in
+                    Task { await viewModel.sendTerminalInput(data) }
+                },
+                onResize: { resize in
+                    Task { await viewModel.sendResizeIfChanged(resize) }
                 }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if !viewModel.terminal.hasContent {
+                Text("Waiting for terminal output...")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+            }
         }
         .frame(maxHeight: .infinity)
     }
@@ -104,12 +121,6 @@ struct SessionDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func computeResize(size: CGSize) -> TerminalResize {
-        let cols = max(Int((size.width - 24) / 8), 20)
-        let rows = max(Int((size.height - 24) / 17), 8)
-        return TerminalResize(cols: cols, rows: rows)
     }
 
     private func socketLabel(_ state: SessionSocket.ConnectionState) -> String {

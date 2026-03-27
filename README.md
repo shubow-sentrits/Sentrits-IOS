@@ -63,3 +63,13 @@ For discovery and pairing behavior only:
 - `/Users/shubow/dev/moonlight-ios`
 
 Do not copy Moonlight’s product model directly. Use it only as a technical reference for native discovery/pairing patterns.
+
+## Terminal Rendering
+
+The iOS client now uses a bundled `xterm.js` renderer inside `WKWebView` for session terminals.
+
+This choice is deliberate:
+
+- PTY output from `vibe-hostd` depends on real escape-sequence handling, not ANSI stripping.
+- The assets are vendored under [VibeEverywhereIOS/Resources/Terminal](/Users/shubow/dev/VibeEverywhereIOS-terminal/VibeEverywhereIOS/Resources/Terminal) to avoid runtime CDN/network dependence.
+- Swift owns websocket transport, ordering, control, and resize state; the embedded renderer is only responsible for terminal emulation and local keyboard handling.

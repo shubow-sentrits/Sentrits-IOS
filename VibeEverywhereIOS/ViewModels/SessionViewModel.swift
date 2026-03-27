@@ -63,6 +63,11 @@ final class SessionViewModel: ObservableObject {
         await socket.sendInput(payload)
     }
 
+    func sendTerminalInput(_ data: String) async {
+        guard !data.isEmpty, canSendInput else { return }
+        await socket.sendInput(data)
+    }
+
     func sendResizeIfChanged(_ resize: TerminalResize) async {
         guard resize != terminalResize else { return }
         terminalResize = resize
@@ -91,7 +96,7 @@ final class SessionViewModel: ObservableObject {
                 controllerClientId: metadata.controllerClientId
             )
         case let .terminalOutput(output):
-            terminal.ingestBase64(output.dataBase64, seqEnd: output.seqEnd)
+            terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
             session = SessionSummary(
                 sessionId: session.sessionId,
