@@ -5,22 +5,36 @@ struct SavedHost: Codable, Identifiable, Equatable, Hashable {
     var name: String
     var address: String
     var port: Int
+    var useTLS: Bool
+    var allowSelfSignedTLS: Bool
     var lastConnectedAt: Date?
 
-    init(id: UUID = UUID(), name: String, address: String, port: Int, lastConnectedAt: Date? = nil) {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        address: String,
+        port: Int,
+        useTLS: Bool = false,
+        allowSelfSignedTLS: Bool = false,
+        lastConnectedAt: Date? = nil
+    ) {
         self.id = id
         self.name = name
         self.address = address
         self.port = port
+        self.useTLS = useTLS
+        self.allowSelfSignedTLS = allowSelfSignedTLS
         self.lastConnectedAt = lastConnectedAt
     }
 
     var baseURL: URL {
-        URL(string: "http://\(address):\(port)")!
+        let scheme = useTLS ? "https" : "http"
+        return URL(string: "\(scheme)://\(address):\(port)")!
     }
 
     var websocketURL: URL {
-        URL(string: "ws://\(address):\(port)")!
+        let scheme = useTLS ? "wss" : "ws"
+        return URL(string: "\(scheme)://\(address):\(port)")!
     }
 
     var tokenKey: String {
@@ -38,7 +52,12 @@ struct HostInfo: Codable {
     let version: String?
     let capabilities: [String]?
     let pairingMode: String?
-    let tls: Bool?
+    let tls: HostTLSInfo?
+}
+
+struct HostTLSInfo: Codable {
+    let enabled: Bool
+    let mode: String?
 }
 
 struct PairingRequestPayload: Codable {
@@ -50,6 +69,24 @@ struct PairingRequestResponse: Codable {
     let pairingId: String
     let code: String
     let status: String
+}
+
+struct PairingClaimPayload: Codable {
+    let pairingId: String
+    let code: String
+}
+
+struct PairingClaimPendingResponse: Codable {
+    let status: String
+}
+
+struct PairingRecordResponse: Codable {
+    let deviceId: String?
+    let deviceName: String?
+    let deviceType: String?
+    let token: String
+    let status: String
+    let approvedAtUnixMs: Int?
 }
 
 struct SessionSummary: Codable, Identifiable, Hashable {

@@ -1,10 +1,34 @@
 import Foundation
 import os
 
+final class NetworkSessionDelegate: NSObject, URLSessionDelegate {
+    private let allowSelfSignedTLS: Bool
+
+    init(allowSelfSignedTLS: Bool) {
+        self.allowSelfSignedTLS = allowSelfSignedTLS
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        guard allowSelfSignedTLS,
+              challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+}
+
 enum APIError: LocalizedError {
     case invalidResponse
     case httpStatus(Int, String)
     case encodingFailed
+    case pairingStillPending
 
     var errorDescription: String? {
         switch self {
@@ -14,6 +38,8 @@ enum APIError: LocalizedError {
             return body.isEmpty ? "Request failed with status \(status)." : "Request failed with status \(status): \(body)"
         case .encodingFailed:
             return "Failed to encode request."
+        case .pairingStillPending:
+            return "Pairing is still pending host approval."
         }
     }
 }
@@ -21,9 +47,18 @@ enum APIError: LocalizedError {
 actor HostClient {
     private let session: URLSession
     private let logger = Logger(subsystem: "com.vibeeverywhere.ios", category: "HostClient")
+    private let delegate: NetworkSessionDelegate
 
-    init(session: URLSession = HostClient.makeSession()) {
+    init(host: SavedHost? = nil) {
+        let allowSelfSignedTLS = host?.allowSelfSignedTLS ?? false
+        let delegate = NetworkSessionDelegate(allowSelfSignedTLS: allowSelfSignedTLS)
+        self.delegate = delegate
+        self.session = HostClient.makeSession(delegate: delegate)
+    }
+
+    init(session: URLSession, delegate: NetworkSessionDelegate) {
         self.session = session
+        self.delegate = delegate
     }
 
     func health(for host: SavedHost) async throws {
@@ -37,6 +72,20 @@ actor HostClient {
     func startPairing(for host: SavedHost, deviceName: String) async throws -> PairingRequestResponse {
         let body = PairingRequestPayload(deviceName: deviceName, deviceType: "mobile")
         return try await requestJSON(path: "/pairing/request", host: host, token: nil, method: "POST", body: body)
+    }
+
+    func claimPairing(for host: SavedHost, pairingId: String, code: String) async throws -> PairingRecordResponse {
+        let body = PairingClaimPayload(pairingId: pairingId, code: code)
+        do {
+            return try await requestJSON(path: "/pairing/claim", host: host, token: nil, method: "POST", body: body)
+        } catch let APIError.httpStatus(status, body) where status == 202 {
+            if let data = body.data(using: .utf8),
+               let pending = try? JSONDecoder().decode(PairingClaimPendingResponse.self, from: data),
+               pending.status == "pending" {
+                throw APIError.pairingStillPending
+            }
+            throw APIError.pairingStillPending
+        }
     }
 
     func listSessions(for host: SavedHost, token: String) async throws -> [SessionSummary] {
@@ -123,11 +172,11 @@ actor HostClient {
         return (data, httpResponse)
     }
 
-    private static func makeSession() -> URLSession {
+    private static func makeSession(delegate: NetworkSessionDelegate) -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.waitsForConnectivity = true
         configuration.timeoutIntervalForRequest = 15
         configuration.timeoutIntervalForResource = 60
-        return URLSession(configuration: configuration)
+        return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 }

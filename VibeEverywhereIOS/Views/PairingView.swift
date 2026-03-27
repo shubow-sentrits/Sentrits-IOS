@@ -3,24 +3,25 @@ import SwiftUI
 struct PairingView: View {
     let host: SavedHost
     let tokenStore: TokenStore
-    let client: HostClient
     let onComplete: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PairingViewModel
 
-    init(host: SavedHost, tokenStore: TokenStore, client: HostClient, onComplete: @escaping (String) -> Void) {
+    init(host: SavedHost, tokenStore: TokenStore, onComplete: @escaping (String) -> Void) {
         self.host = host
         self.tokenStore = tokenStore
-        self.client = client
         self.onComplete = onComplete
-        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, client: client, tokenStore: tokenStore))
+        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, tokenStore: tokenStore))
     }
 
     var body: some View {
         Form {
             Section("Host") {
                 Text(host.displayLabel)
+                Text(host.useTLS ? "HTTPS/WSS" : "HTTP/WS")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Pairing Request") {
@@ -28,7 +29,7 @@ struct PairingView: View {
                     LabeledContent("Pairing ID", value: response.pairingId)
                     LabeledContent("Code", value: response.code)
                     LabeledContent("Status", value: response.status)
-                    Text("Approve this pairing in the host admin UI at http://127.0.0.1:18085, then paste the returned bearer token below.")
+                    Text("Approve this pairing in the host admin UI. The app will claim the token automatically once approval completes.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -39,20 +40,23 @@ struct PairingView: View {
                 }
             }
 
-            if viewModel.response != nil {
-                Section("Approved Token") {
-                    TextField("Bearer token", text: $viewModel.manualToken, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button("Validate and Save Token") {
-                        Task {
-                            let saved = await viewModel.saveToken()
-                            if saved {
-                                onComplete(viewModel.manualToken.trimmingCharacters(in: .whitespacesAndNewlines))
-                            }
-                        }
+            if viewModel.isWaitingForApproval {
+                Section("Approval") {
+                    HStack {
+                        ProgressView()
+                        Text("Waiting for host approval")
                     }
-                    .disabled(viewModel.isBusy)
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            if let retryableError = viewModel.retryableError {
+                Section("Retry") {
+                    Text(retryableError)
+                        .foregroundStyle(.red)
+                    Button("Retry Claim Polling") {
+                        viewModel.retryPolling()
+                    }
                 }
             }
 
@@ -64,9 +68,29 @@ struct PairingView: View {
             }
         }
         .navigationTitle("Pair Host")
+        .onChange(of: viewModel.statusMessage) {
+            guard viewModel.statusMessage == "Pairing approved. Token saved.",
+                  let hostToken = tokenStore.token(for: host.tokenKey) else {
+                return
+            }
+            onComplete(hostToken)
+        }
+        .onDisappear {
+            viewModel.cancel()
+        }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if viewModel.isWaitingForApproval {
+                    Button("Cancel") {
+                        viewModel.cancel()
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Close") { dismiss() }
+                Button("Close") {
+                    viewModel.cancel()
+                    dismiss()
+                }
             }
         }
     }

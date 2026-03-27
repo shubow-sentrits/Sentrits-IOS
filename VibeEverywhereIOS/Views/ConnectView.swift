@@ -3,18 +3,16 @@ import SwiftUI
 struct ConnectView: View {
     @ObservedObject var hostsStore: SavedHostsStore
     let tokenStore: TokenStore
-    let client: HostClient
 
     @StateObject private var viewModel: ConnectViewModel
     @State private var pairingHost: SavedHost?
     @State private var sessionsHost: SavedHost?
     @State private var sessionsToken: String?
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore, client: HostClient) {
+    init(hostsStore: SavedHostsStore, tokenStore: TokenStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
-        self.client = client
-        _viewModel = StateObject(wrappedValue: ConnectViewModel(client: client))
+        _viewModel = StateObject(wrappedValue: ConnectViewModel())
     }
 
     var body: some View {
@@ -27,6 +25,8 @@ struct ConnectView: View {
                         .autocorrectionDisabled()
                     TextField("Port", text: $viewModel.port)
                         .keyboardType(.numberPad)
+                    Toggle("Use HTTPS/WSS", isOn: $viewModel.useTLS)
+                    Toggle("Trust Self-Signed Certificate", isOn: $viewModel.allowSelfSignedTLS)
                 }
 
                 Section {
@@ -71,6 +71,7 @@ struct ConnectView: View {
                         LabeledContent("Host ID", value: info.hostId ?? "Unknown")
                         LabeledContent("Version", value: info.version ?? "Unknown")
                         LabeledContent("Pairing", value: info.pairingMode ?? "Unknown")
+                        LabeledContent("TLS", value: info.tls?.enabled == true ? (info.tls?.mode ?? "enabled") : "disabled")
                     }
                 }
 
@@ -117,7 +118,6 @@ struct ConnectView: View {
                     PairingView(
                         host: host,
                         tokenStore: tokenStore,
-                        client: client,
                         onComplete: { token in
                             hostsStore.upsert(host)
                             sessionsToken = token
@@ -132,7 +132,6 @@ struct ConnectView: View {
                     SessionsView(
                         host: host,
                         token: token,
-                        client: client,
                         onConnected: { hostsStore.touch(hostID: host.id) }
                     )
                 }

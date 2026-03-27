@@ -5,20 +5,18 @@ final class ConnectViewModel: ObservableObject {
     @Published var hostName = ""
     @Published var hostAddress = ""
     @Published var port = "18086"
+    @Published var useTLS = false
+    @Published var allowSelfSignedTLS = false
     @Published var statusMessage: String?
     @Published var hostInfo: HostInfo?
     @Published var isBusy = false
-
-    private let client: HostClient
-
-    init(client: HostClient) {
-        self.client = client
-    }
 
     func populate(from host: SavedHost) {
         hostName = host.name
         hostAddress = host.address
         port = String(host.port)
+        useTLS = host.useTLS
+        allowSelfSignedTLS = host.allowSelfSignedTLS
     }
 
     func makeHost() -> SavedHost? {
@@ -28,7 +26,9 @@ final class ConnectViewModel: ObservableObject {
         return SavedHost(
             name: hostName.trimmingCharacters(in: .whitespacesAndNewlines),
             address: hostAddress.trimmingCharacters(in: .whitespacesAndNewlines),
-            port: portValue
+            port: portValue,
+            useTLS: useTLS,
+            allowSelfSignedTLS: allowSelfSignedTLS
         )
     }
 
@@ -37,10 +37,12 @@ final class ConnectViewModel: ObservableObject {
         defer { isBusy = false }
 
         do {
+            let client = HostClient(host: host)
             try await client.health(for: host)
             let info = try await client.fetchHostInfo(for: host)
             hostInfo = info
-            statusMessage = "Reachable: \(info.displayName)"
+            let tlsStatus = info.tls?.enabled == true ? "TLS enabled" : "TLS disabled"
+            statusMessage = "Reachable: \(info.displayName) (\(tlsStatus))"
         } catch {
             statusMessage = error.localizedDescription
             hostInfo = nil

@@ -3,17 +3,15 @@ import SwiftUI
 struct SessionsView: View {
     let host: SavedHost
     let token: String
-    let client: HostClient
     let onConnected: () -> Void
 
     @StateObject private var viewModel: SessionsViewModel
 
-    init(host: SavedHost, token: String, client: HostClient, onConnected: @escaping () -> Void) {
+    init(host: SavedHost, token: String, onConnected: @escaping () -> Void) {
         self.host = host
         self.token = token
-        self.client = client
         self.onConnected = onConnected
-        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token, client: client))
+        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token))
     }
 
     var body: some View {
@@ -60,7 +58,7 @@ struct SessionsView: View {
         }
         .navigationTitle("Sessions")
         .navigationDestination(for: SessionSummary.self) { session in
-            SessionDetailView(host: host, token: token, session: session, client: client)
+            SessionDetailView(host: host, token: token, session: session)
         }
         .task {
             onConnected()

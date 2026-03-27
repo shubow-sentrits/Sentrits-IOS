@@ -11,6 +11,7 @@ final class SessionSocket {
     }
 
     private let session: URLSession
+    private let delegate: NetworkSessionDelegate
     private let logger = Logger(subsystem: "com.vibeeverywhere.ios", category: "SessionSocket")
     private var task: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
@@ -19,8 +20,15 @@ final class SessionSocket {
     var onEvent: ((SessionSocketEvent) -> Void)?
     var onStateChange: ((ConnectionState) -> Void)?
 
-    init(session: URLSession = SessionSocket.makeSession()) {
+    init(host: SavedHost) {
+        let delegate = NetworkSessionDelegate(allowSelfSignedTLS: host.allowSelfSignedTLS)
+        self.delegate = delegate
+        self.session = SessionSocket.makeSession(delegate: delegate)
+    }
+
+    init(session: URLSession, delegate: NetworkSessionDelegate) {
         self.session = session
+        self.delegate = delegate
     }
 
     func connect(host: SavedHost, sessionId: String, token: String) {
@@ -122,12 +130,12 @@ final class SessionSocket {
         }
     }
 
-    private static func makeSession() -> URLSession {
+    private static func makeSession(delegate: NetworkSessionDelegate) -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.waitsForConnectivity = true
         configuration.timeoutIntervalForRequest = 15
         configuration.timeoutIntervalForResource = 60
-        return URLSession(configuration: configuration)
+        return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 }
 

@@ -4,16 +4,14 @@ struct SessionDetailView: View {
     let host: SavedHost
     let token: String
     let session: SessionSummary
-    let client: HostClient
 
     @StateObject private var viewModel: SessionViewModel
 
-    init(host: SavedHost, token: String, session: SessionSummary, client: HostClient) {
+    init(host: SavedHost, token: String, session: SessionSummary) {
         self.host = host
         self.token = token
         self.session = session
-        self.client = client
-        _viewModel = StateObject(wrappedValue: SessionViewModel(host: host, token: token, session: session, client: client))
+        _viewModel = StateObject(wrappedValue: SessionViewModel(host: host, token: token, session: session))
     }
 
     var body: some View {

@@ -9,12 +9,10 @@ final class SessionsViewModel: ObservableObject {
 
     let host: SavedHost
     let token: String
-    private let client: HostClient
 
-    init(host: SavedHost, token: String, client: HostClient) {
+    init(host: SavedHost, token: String) {
         self.host = host
         self.token = token
-        self.client = client
     }
 
     func refresh() async {
@@ -22,6 +20,7 @@ final class SessionsViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
+            let client = HostClient(host: host)
             hostInfo = try await client.fetchHostInfo(for: host)
             sessions = try await client.listSessions(for: host, token: token)
             errorMessage = nil

@@ -12,15 +12,13 @@ final class SessionViewModel: ObservableObject {
     let token: String
     let terminal = TerminalEngine()
 
-    private let client: HostClient
     private let socket: SessionSocket
 
-    init(host: SavedHost, token: String, session: SessionSummary, client: HostClient, socket: SessionSocket = SessionSocket()) {
+    init(host: SavedHost, token: String, session: SessionSummary) {
         self.host = host
         self.token = token
         self.session = session
-        self.client = client
-        self.socket = socket
+        self.socket = SessionSocket(host: host)
 
         socket.onStateChange = { [weak self] state in
             Task { @MainActor in
@@ -73,6 +71,7 @@ final class SessionViewModel: ObservableObject {
 
     func stopSession() async {
         do {
+            let client = HostClient(host: host)
             try await client.stopSession(sessionId: session.sessionId, host: host, token: token)
         } catch {
             lastError = error.localizedDescription
