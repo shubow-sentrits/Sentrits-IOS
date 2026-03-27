@@ -265,10 +265,63 @@ struct SessionSummary: Codable, Identifiable, Hashable {
     let workspaceRoot: String
     let title: String
     let status: String
+    let conversationId: String?
+    let groupTags: [String]
     let controllerKind: String
     let controllerClientId: String?
+    let isRecovered: Bool?
+    let archivedRecord: Bool?
+    let isActive: Bool?
+    let inventoryState: String?
+    let activityState: String?
+    let supervisionState: String?
+    let attentionState: String?
+    let attentionReason: String?
+    let createdAtUnixMs: Int64?
+    let lastStatusAtUnixMs: Int64?
+    let lastOutputAtUnixMs: Int64?
+    let lastActivityAtUnixMs: Int64?
+    let lastFileChangeAtUnixMs: Int64?
+    let lastGitChangeAtUnixMs: Int64?
+    let lastControllerChangeAtUnixMs: Int64?
+    let attentionSinceUnixMs: Int64?
+    let currentSequence: Int?
+    let attachedClientCount: Int?
+    let recentFileChangeCount: Int?
+    let gitDirty: Bool?
+    let gitBranch: String?
+    let gitModifiedCount: Int?
+    let gitStagedCount: Int?
+    let gitUntrackedCount: Int?
 
     var id: String { sessionId }
+
+    var displayTitle: String {
+        title.isEmpty ? sessionId : title
+    }
+
+    var normalizedGroupTags: [String] {
+        groupTags.map(Self.normalizeGroupTag).filter { !$0.isEmpty }
+    }
+
+    var isExplorerEligible: Bool {
+        if let isActive {
+            return isActive
+        }
+
+        switch status.lowercased() {
+        case "exited", "error":
+            return false
+        default:
+            return true
+        }
+    }
+
+    static func normalizeGroupTag(_ rawValue: String) -> String {
+        rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
 }
 
 private extension String {
