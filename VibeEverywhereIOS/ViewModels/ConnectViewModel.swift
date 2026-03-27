@@ -2,35 +2,25 @@ import Foundation
 
 @MainActor
 final class ConnectViewModel: ObservableObject {
-    @Published var hostName = ""
+    @Published var hostAlias = ""
     @Published var hostAddress = ""
     @Published var port = "18086"
     @Published var useTLS = false
     @Published var allowSelfSignedTLS = false
-    @Published var statusMessage: String?
-    @Published var hostInfo: HostInfo?
-    @Published var isBusy = false
-
-    private let activityStore: ActivityLogStore
-
-    init(activityStore: ActivityLogStore) {
-        self.activityStore = activityStore
-    }
 
     func populate(from host: SavedHost) {
-        hostName = host.name
+        hostAlias = host.alias ?? ""
         hostAddress = host.address
         port = String(host.port)
         useTLS = host.useTLS
         allowSelfSignedTLS = host.allowSelfSignedTLS
     }
 
-    func makeHost() -> SavedHost? {
+    func makeEndpoint() -> HostEndpoint? {
         guard let portValue = Int(port), !hostAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
-        return SavedHost(
-            name: hostName.trimmingCharacters(in: .whitespacesAndNewlines),
+        return HostEndpoint(
             address: hostAddress.trimmingCharacters(in: .whitespacesAndNewlines),
             port: portValue,
             useTLS: useTLS,
@@ -38,33 +28,13 @@ final class ConnectViewModel: ObservableObject {
         )
     }
 
-    func check(host: SavedHost) async {
-        isBusy = true
-        defer { isBusy = false }
+    var alias: String? {
+        hostAlias.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+}
 
-        do {
-            let client = HostClient(host: host)
-            try await client.health(for: host)
-            let info = try await client.fetchHostInfo(for: host)
-            hostInfo = info
-            let tlsStatus = info.tls?.enabled == true ? "TLS enabled" : "TLS disabled"
-            statusMessage = "Reachable: \(info.displayName) (\(tlsStatus))"
-            activityStore.record(
-                category: .system,
-                title: "Host verified",
-                message: "Confirmed reachability for \(info.displayName). \(tlsStatus).",
-                host: host
-            )
-        } catch {
-            statusMessage = error.localizedDescription
-            hostInfo = nil
-            activityStore.record(
-                severity: .warning,
-                category: .system,
-                title: "Host verification failed",
-                message: error.localizedDescription,
-                host: host
-            )
-        }
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }

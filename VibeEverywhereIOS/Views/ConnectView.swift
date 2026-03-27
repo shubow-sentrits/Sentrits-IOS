@@ -1,157 +1,79 @@
 import SwiftUI
 
 struct ConnectView: View {
-    @ObservedObject var hostsStore: SavedHostsStore
+    @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
     @ObservedObject var activityStore: ActivityLogStore
 
-    @StateObject private var viewModel: ConnectViewModel
-    @State private var pairingHost: SavedHost?
-    @State private var sessionsHost: SavedHost?
-    @State private var sessionsToken: String?
+    var body: some View {
+        TabView {
+            NavigationStack {
+                PairingView(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
+            }
+            .tabItem {
+                Label("Pairing", systemImage: "dot.radiowaves.left.and.right")
+            }
 
-    init(hostsStore: SavedHostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
-        self.hostsStore = hostsStore
-        self.tokenStore = tokenStore
-        self.activityStore = activityStore
-        _viewModel = StateObject(wrappedValue: ConnectViewModel(activityStore: activityStore))
+            NavigationStack {
+                ShellPlaceholderView(
+                    title: "Inventory",
+                    subtitle: "Device-grouped sessions land here once the pairing foundation is in place."
+                )
+            }
+            .tabItem {
+                Label("Inventory", systemImage: "square.stack.3d.up")
+            }
+
+            NavigationStack {
+                ShellPlaceholderView(
+                    title: "Explorer",
+                    subtitle: "Connected-session workspace remains intentionally untouched in this branch."
+                )
+            }
+            .tabItem {
+                Label("Explorer", systemImage: "rectangle.split.3x3")
+            }
+
+            NavigationStack {
+                ActivityView(activityStore: activityStore)
+            }
+            .tabItem {
+                Label("Activity", systemImage: "clock.arrow.circlepath")
+            }
+        }
+        .tint(Color(red: 0.87, green: 0.69, blue: 0.44))
     }
+}
+
+private struct ShellPlaceholderView: View {
+    let title: String
+    let subtitle: String
 
     var body: some View {
-            Form {
-                Section("Host") {
-                    TextField("Name", text: $viewModel.hostName)
-                    TextField("IP or hostname", text: $viewModel.hostAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Port", text: $viewModel.port)
-                        .keyboardType(.numberPad)
-                    Toggle("Use HTTPS/WSS", isOn: $viewModel.useTLS)
-                    Toggle("Trust Self-Signed Certificate", isOn: $viewModel.allowSelfSignedTLS)
-                }
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.08, green: 0.09, blue: 0.11),
+                    Color(red: 0.15, green: 0.12, blue: 0.10),
+                    Color(red: 0.05, green: 0.06, blue: 0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                Section {
-                    Button("Check Reachability") {
-                        guard let host = viewModel.makeHost() else {
-                            viewModel.statusMessage = "Enter a valid host and port."
-                            return
-                        }
-                        Task { await viewModel.check(host: host) }
-                    }
-                    .disabled(viewModel.isBusy)
-
-                    Button("Start Pairing") {
-                        guard let host = viewModel.makeHost() else {
-                            viewModel.statusMessage = "Enter a valid host and port."
-                            return
-                        }
-                        hostsStore.upsert(host)
-                        activityStore.record(
-                            category: .pairing,
-                            title: "Pairing flow opened",
-                            message: "Prepared host for pairing from the pairing tab.",
-                            host: host
-                        )
-                        pairingHost = host
-                    }
-                    .disabled(viewModel.isBusy)
-
-                    Button("Open Sessions") {
-                        guard let host = viewModel.makeHost() else {
-                            viewModel.statusMessage = "Enter a valid host and port."
-                            return
-                        }
-                        guard let token = tokenStore.token(for: host.tokenKey) else {
-                            viewModel.statusMessage = "No saved token for this host. Pair first."
-                            return
-                        }
-                        hostsStore.upsert(host)
-                        sessionsToken = token
-                        sessionsHost = host
-                        activityStore.record(
-                            category: .inventory,
-                            title: "Sessions opened",
-                            message: "Opened the saved session inventory for this host.",
-                            host: host
-                        )
-                    }
-                    .disabled(viewModel.isBusy)
-                }
-
-                if let info = viewModel.hostInfo {
-                    Section("Host Info") {
-                        LabeledContent("Display Name", value: info.displayName)
-                        LabeledContent("Host ID", value: info.hostId ?? "Unknown")
-                        LabeledContent("Version", value: info.version ?? "Unknown")
-                        LabeledContent("Pairing", value: info.pairingMode ?? "Unknown")
-                        LabeledContent("TLS", value: info.tls?.enabled == true ? (info.tls?.mode ?? "enabled") : "disabled")
-                    }
-                }
-
-                if let statusMessage = viewModel.statusMessage {
-                    Section("Status") {
-                        Text(statusMessage)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Section("Saved Hosts") {
-                    if hostsStore.hosts.isEmpty {
-                        Text("No saved hosts yet.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(hostsStore.hosts) { host in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Button(host.displayLabel) {
-                                    viewModel.populate(from: host)
-                                }
-                                .buttonStyle(.plain)
-
-                                HStack {
-                                    if tokenStore.token(for: host.tokenKey) != nil {
-                                        Text("Token saved")
-                                    } else {
-                                        Text("No token")
-                                    }
-                                    if let lastConnectedAt = host.lastConnectedAt {
-                                        Text(lastConnectedAt.formatted(date: .abbreviated, time: .shortened))
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        .onDelete(perform: hostsStore.remove)
-                    }
-                }
+            VStack(alignment: .leading, spacing: 16) {
+                Text(title)
+                    .font(.system(size: 34, weight: .semibold, design: .serif))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.body)
+                    .foregroundStyle(Color.white.opacity(0.72))
             }
-            .navigationTitle("VibeEverywhere")
-            .scrollContentBackground(.hidden)
-            .background(ActivityPalette.background.ignoresSafeArea())
-            .sheet(item: $pairingHost) { host in
-                NavigationStack {
-                    PairingView(
-                        host: host,
-                        tokenStore: tokenStore,
-                        activityStore: activityStore,
-                        onComplete: { token in
-                            hostsStore.upsert(host)
-                            sessionsToken = token
-                            sessionsHost = host
-                            pairingHost = nil
-                        }
-                    )
-                }
-            }
-            .navigationDestination(item: $sessionsHost) { host in
-                if let token = sessionsToken {
-                    SessionsView(
-                        host: host,
-                        token: token,
-                        onConnected: { hostsStore.touch(hostID: host.id) },
-                        activityStore: activityStore
-                    )
-                }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(24)
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

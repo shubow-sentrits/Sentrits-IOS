@@ -3,11 +3,17 @@ import UIKit
 
 @MainActor
 final class PairingViewModel: ObservableObject {
-    @Published private(set) var response: PairingRequestResponse?
-    @Published var statusMessage: String?
-    @Published var isBusy = false
-    @Published private(set) var isWaitingForApproval = false
-    @Published private(set) var retryableError: String?
+    enum Phase {
+        case idle
+        case requesting
+        case waiting(PairingRequestResponse)
+        case approved(deviceName: String?)
+        case rejected
+        case expired
+        case failed(String)
+    }
+
+    @Published private(set) var phase: Phase = .idle
 
     private let host: SavedHost
     private let tokenStore: TokenStore
@@ -23,112 +29,106 @@ final class PairingViewModel: ObservableObject {
 
     func start() async {
         stopPolling()
-        isBusy = true
-        retryableError = nil
-        defer { isBusy = false }
+        phase = .requesting
 
         do {
             let deviceName = UIDevice.current.name
             let client = HostClient(host: host)
-            response = try await client.startPairing(for: host, deviceName: deviceName)
-            isWaitingForApproval = true
-            statusMessage = "Waiting for host approval."
-            if let response {
-                activityStore.record(
-                    category: .pairing,
-                    title: "Pairing requested",
-                    message: "Waiting for approval using code \(response.code).",
-                    host: host
-                )
-            }
+            let response = try await client.startPairing(for: host, deviceName: deviceName)
+            phase = .waiting(response)
+            activityStore.record(
+                category: .pairing,
+                title: "Pairing requested",
+                message: "Waiting for host approval using code \(response.code).",
+                hostLabel: host.displayLabel
+            )
             startPollingIfNeeded()
         } catch {
-            isWaitingForApproval = false
-            statusMessage = error.localizedDescription
-            retryableError = error.localizedDescription
+            phase = .failed(error.localizedDescription)
             activityStore.record(
                 severity: .warning,
                 category: .pairing,
                 title: "Pairing request failed",
                 message: error.localizedDescription,
-                host: host
+                hostLabel: host.displayLabel
             )
         }
     }
 
     func retryPolling() {
-        retryableError = nil
-        statusMessage = "Waiting for host approval."
-        isWaitingForApproval = true
+        guard case let .waiting(response) = phase else { return }
+        phase = .waiting(response)
         activityStore.record(
             category: .pairing,
             title: "Pairing polling resumed",
-            message: "Retrying claim polling after an interruption.",
-            host: host
+            message: "Retrying the pairing claim loop.",
+            hostLabel: host.displayLabel
         )
-        startPollingIfNeeded(forceRestart: true)
+        startPollingIfNeeded(forceRestart: true, response: response)
     }
 
     func cancel() {
         stopPolling()
-        isWaitingForApproval = false
-        activityStore.record(
-            severity: .warning,
-            category: .pairing,
-            title: "Pairing canceled",
-            message: "Stopped waiting for host approval on this device.",
-            host: host
-        )
+        if case .requesting = phase {
+            phase = .idle
+            activityStore.record(
+                severity: .warning,
+                category: .pairing,
+                title: "Pairing canceled",
+                message: "Canceled before the host returned a pairing code.",
+                hostLabel: host.displayLabel
+            )
+        } else if case .waiting = phase {
+            activityStore.record(
+                severity: .warning,
+                category: .pairing,
+                title: "Pairing canceled",
+                message: "Stopped waiting for host approval.",
+                hostLabel: host.displayLabel
+            )
+        }
     }
 
     deinit {
         pollingTask?.cancel()
     }
 
-    private func startPollingIfNeeded(forceRestart: Bool = false) {
-        guard let response else { return }
+    private func startPollingIfNeeded(forceRestart: Bool = false, response explicitResponse: PairingRequestResponse? = nil) {
+        let response: PairingRequestResponse
+        if let explicitResponse {
+            response = explicitResponse
+        } else if case let .waiting(currentResponse) = phase {
+            response = currentResponse
+        } else {
+            return
+        }
+
         if forceRestart {
             stopPolling()
         } else if pollingTask != nil {
             return
         }
 
-        pollingTask = Task { [host, tokenStore] in
+        pollingTask = Task { [host] in
             let client = HostClient(host: host)
             while !Task.isCancelled {
                 do {
                     let claim = try await client.claimPairing(for: host, pairingId: response.pairingId, code: response.code)
-                    try tokenStore.setToken(claim.token, for: host.tokenKey)
                     await MainActor.run {
-                        self.isWaitingForApproval = false
-                        self.retryableError = nil
-                        self.statusMessage = "Pairing approved. Token saved."
-                        self.activityStore.record(
-                            category: .pairing,
-                            title: "Pairing approved",
-                            message: "Token saved and ready for session access.",
-                            host: host
-                        )
-                        self.stopPolling()
+                        self.handleClaimResponse(claim)
                     }
-                    return
-                } catch APIError.pairingStillPending {
-                    await MainActor.run {
-                        self.isWaitingForApproval = true
-                        self.retryableError = nil
-                        self.statusMessage = "Waiting for host approval."
+                    if claim.status != "pending" {
+                        return
                     }
                 } catch {
                     await MainActor.run {
-                        self.isWaitingForApproval = false
-                        self.retryableError = error.localizedDescription
-                        self.statusMessage = "Pairing claim failed. Retry to continue waiting."
+                        self.phase = .failed(error.localizedDescription)
                         self.activityStore.record(
                             severity: .warning,
                             category: .pairing,
                             title: "Pairing claim interrupted",
                             message: error.localizedDescription,
-                            host: host
+                            hostLabel: host.displayLabel
                         )
                         self.stopPolling()
                     }
@@ -141,6 +141,77 @@ final class PairingViewModel: ObservableObject {
                     return
                 }
             }
+        }
+    }
+
+    private func handleClaimResponse(_ response: PairingClaimResponse) {
+        switch response.status {
+        case "approved":
+            if let token = response.token {
+                do {
+                    try tokenStore.setToken(token, for: host.tokenKey)
+                    phase = .approved(deviceName: response.deviceName)
+                    activityStore.record(
+                        category: .pairing,
+                        title: "Pairing approved",
+                        message: "Token saved for trusted host access.",
+                        hostLabel: host.displayLabel
+                    )
+                } catch {
+                    phase = .failed(error.localizedDescription)
+                    activityStore.record(
+                        severity: .error,
+                        category: .pairing,
+                        title: "Token save failed",
+                        message: error.localizedDescription,
+                        hostLabel: host.displayLabel
+                    )
+                }
+            } else {
+                phase = .failed("Pairing completed without a token.")
+                activityStore.record(
+                    severity: .error,
+                    category: .pairing,
+                    title: "Pairing completed without token",
+                    message: "The host approved pairing but no token was returned.",
+                    hostLabel: host.displayLabel
+                )
+            }
+            stopPolling()
+        case "pending":
+            if case let .waiting(request) = phase {
+                phase = .waiting(request)
+            }
+        case "rejected":
+            phase = .rejected
+            activityStore.record(
+                severity: .warning,
+                category: .pairing,
+                title: "Pairing rejected",
+                message: "The host rejected the pairing request.",
+                hostLabel: host.displayLabel
+            )
+            stopPolling()
+        case "expired":
+            phase = .expired
+            activityStore.record(
+                severity: .warning,
+                category: .pairing,
+                title: "Pairing expired",
+                message: "The pairing request expired before approval.",
+                hostLabel: host.displayLabel
+            )
+            stopPolling()
+        default:
+            phase = .failed("Unexpected pairing status: \(response.status)")
+            activityStore.record(
+                severity: .error,
+                category: .pairing,
+                title: "Unexpected pairing status",
+                message: response.status,
+                hostLabel: host.displayLabel
+            )
+            stopPolling()
         }
     }
 
