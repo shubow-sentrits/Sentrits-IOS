@@ -206,3 +206,27 @@ enum InventoryStoreError: LocalizedError {
         }
     }
 }
+
+extension InventoryStore {
+    static func previewStore(hostsStore: HostsStore, tokenStore: TokenStore) -> InventoryStore {
+        let store = InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore)
+        store.sections = [
+            InventoryDeviceSection(
+                host: PreviewFixtures.hostA,
+                token: tokenStore.token(for: PreviewFixtures.hostA.tokenKey),
+                sessions: [PreviewFixtures.sessionA, PreviewFixtures.sessionB],
+                hostInfo: PreviewFixtures.hostInfoA,
+                errorMessage: nil
+            ),
+            InventoryDeviceSection(
+                host: PreviewFixtures.hostB,
+                token: tokenStore.token(for: PreviewFixtures.hostB.tokenKey),
+                sessions: [],
+                hostInfo: nil,
+                errorMessage: nil
+            )
+        ]
+        store.showStoppedSessions = true
+        return store
+    }
+}

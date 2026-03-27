@@ -15,8 +15,6 @@
 		A00000000000000000000006 /* HostClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* HostClient.swift */; };
 		A00000000000000000000007 /* TerminalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TerminalEngine.swift */; };
 		A00000000000000000000008 /* SessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* SessionSocket.swift */; };
-		A0000000000000000000003B /* DiscoveryListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* DiscoveryListener.swift */; };
-		A0000000000000000000003C /* HostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* HostsStore.swift */; };
 		A00000000000000000000009 /* ConnectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ConnectViewModel.swift */; };
 		A0000000000000000000000A /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* PairingViewModel.swift */; };
 		A0000000000000000000000B /* SessionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* SessionsViewModel.swift */; };
@@ -26,16 +24,19 @@
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
 		A00000000000000000000021 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* SessionDetailView.swift */; };
+		A0000000000000000000003B /* DiscoveryListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* DiscoveryListener.swift */; };
+		A0000000000000000000003C /* HostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* HostsStore.swift */; };
 		A00000000000000000000041 /* InventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000042 /* InventoryStore.swift */; };
 		A00000000000000000000043 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000044 /* AppShellView.swift */; };
 		A00000000000000000000045 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000046 /* InventoryView.swift */; };
-		A00000000000000000000055 /* ActivityLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000056 /* ActivityLog.swift */; };
-		A00000000000000000000057 /* ActivityLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000058 /* ActivityLogStore.swift */; };
-		A00000000000000000000059 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000005A /* ActivityView.swift */; };
 		A00000000000000000000051 /* terminal.html in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004C /* terminal.html */; };
 		A00000000000000000000052 /* xterm.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004D /* xterm.js */; };
 		A00000000000000000000053 /* xterm.css in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004E /* xterm.css */; };
 		A00000000000000000000054 /* addon-fit.js in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004F /* addon-fit.js */; };
+		A00000000000000000000055 /* ActivityLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000056 /* ActivityLog.swift */; };
+		A00000000000000000000057 /* ActivityLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000058 /* ActivityLogStore.swift */; };
+		A00000000000000000000059 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000005A /* ActivityView.swift */; };
+		A00000000000000000000060 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000061 /* PreviewSupport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,8 +48,6 @@
 		A00000000000000000000016 /* HostClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClient.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* TerminalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalEngine.swift; sourceTree = "<group>"; };
 		A00000000000000000000018 /* SessionSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSocket.swift; sourceTree = "<group>"; };
-		A00000000000000000000039 /* DiscoveryListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryListener.swift; sourceTree = "<group>"; };
-		A0000000000000000000003A /* HostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostsStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000019 /* ConnectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* PairingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001B /* SessionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsViewModel.swift; sourceTree = "<group>"; };
@@ -60,16 +59,19 @@
 		A00000000000000000000022 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A00000000000000000000023 /* VibeEverywhereIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = VibeEverywhereIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000039 /* DiscoveryListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryListener.swift; sourceTree = "<group>"; };
+		A0000000000000000000003A /* HostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostsStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000042 /* InventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000044 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		A00000000000000000000046 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
-		A00000000000000000000056 /* ActivityLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLog.swift; sourceTree = "<group>"; };
-		A00000000000000000000058 /* ActivityLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogStore.swift; sourceTree = "<group>"; };
-		A0000000000000000000005A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		A0000000000000000000004C /* terminal.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = terminal.html; sourceTree = "<group>"; };
 		A0000000000000000000004D /* xterm.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = xterm.js; sourceTree = "<group>"; };
 		A0000000000000000000004E /* xterm.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = xterm.css; sourceTree = "<group>"; };
 		A0000000000000000000004F /* addon-fit.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "addon-fit.js"; sourceTree = "<group>"; };
+		A00000000000000000000056 /* ActivityLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLog.swift; sourceTree = "<group>"; };
+		A00000000000000000000058 /* ActivityLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogStore.swift; sourceTree = "<group>"; };
+		A0000000000000000000005A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		A00000000000000000000061 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +102,7 @@
 				A0000000000000000000002B /* ViewModels */,
 				A0000000000000000000002C /* Views */,
 				A0000000000000000000002D /* Resources */,
+				A00000000000000000000061 /* PreviewSupport.swift */,
 			);
 			path = VibeEverywhereIOS;
 			sourceTree = "<group>";
@@ -282,6 +285,7 @@
 				A00000000000000000000055 /* ActivityLog.swift in Sources */,
 				A00000000000000000000057 /* ActivityLogStore.swift in Sources */,
 				A00000000000000000000059 /* ActivityView.swift in Sources */,
+				A00000000000000000000060 /* PreviewSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -297,6 +301,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeEverywhereIOS/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -325,6 +330,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeEverywhereIOS/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -386,6 +392,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};

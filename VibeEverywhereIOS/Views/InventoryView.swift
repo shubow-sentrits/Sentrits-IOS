@@ -4,17 +4,30 @@ struct InventoryView: View {
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
     @ObservedObject var activityStore: ActivityLogStore
+    @ObservedObject var explorerStore: ExplorerWorkspaceStore
+    let onOpenExplorer: () -> Void
 
     @StateObject private var store: InventoryStore
     @State private var createSheetHost: SavedHost?
-    @State private var focusedSession: InventoryFocusedSession?
     @State private var inventoryError: String?
+    private let autoRefreshOnAppear: Bool
 
-    init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
+    init(
+        hostsStore: HostsStore,
+        tokenStore: TokenStore,
+        activityStore: ActivityLogStore,
+        explorerStore: ExplorerWorkspaceStore,
+        onOpenExplorer: @escaping () -> Void,
+        previewStore: InventoryStore? = nil,
+        autoRefreshOnAppear: Bool = true
+    ) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
         self.activityStore = activityStore
-        _store = StateObject(wrappedValue: InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore))
+        self.explorerStore = explorerStore
+        self.onOpenExplorer = onOpenExplorer
+        _store = StateObject(wrappedValue: previewStore ?? InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore))
+        self.autoRefreshOnAppear = autoRefreshOnAppear
     }
 
     var body: some View {
@@ -33,6 +46,13 @@ struct InventoryView: View {
                     .padding(.bottom, 120)
                 }
                 .scrollIndicators(.hidden)
+                .task {
+                    guard autoRefreshOnAppear else { return }
+                    await store.refresh()
+                }
+                .refreshable {
+                    await store.refresh()
+                }
             }
         )
 
@@ -51,13 +71,8 @@ struct InventoryView: View {
 
         let withRefresh = AnyView(
             withChrome
-                .task {
-                    await store.refresh()
-                }
-                .refreshable {
-                    await store.refresh()
-                }
                 .onChange(of: hostsStore.savedHosts) {
+                    guard autoRefreshOnAppear else { return }
                     Task { await store.refresh() }
                 }
         )
@@ -67,27 +82,10 @@ struct InventoryView: View {
                 .sheet(item: $createSheetHost) { host in
                     CreateSessionSheet(host: host) { input in
                         do {
-                            let created = try await store.createSession(hostID: host.id, input: input)
-                            if let token = hostsStore.token(for: host) {
-                                focusedSession = InventoryFocusedSession(
-                                    viewModel: SessionViewModel(host: host, token: token, session: created, activityStore: activityStore)
-                                )
-                            }
+                            _ = try await store.createSession(hostID: host.id, input: input)
                         } catch {
                             inventoryError = error.localizedDescription
                         }
-                    }
-                }
-                .sheet(item: $focusedSession) { focused in
-                    NavigationStack {
-                        SessionDetailView(viewModel: focused.viewModel)
-                            .toolbar {
-                                ToolbarItem(placement: .topBarLeading) {
-                                    Button("Disconnect") {
-                                        focusedSession = nil
-                                    }
-                                }
-                            }
                     }
                 }
         )
@@ -131,7 +129,7 @@ struct InventoryView: View {
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.94))
 
-            Text("Sessions are grouped by paired device. Create and stop them from here, then open focused control when needed.")
+            Text("Sessions are grouped by paired device. Create and stop them here, then connect them into Explorer for live previews.")
                 .font(.subheadline)
                 .foregroundStyle(Color.white.opacity(0.68))
 
@@ -193,10 +191,10 @@ struct InventoryView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private func deviceSection(_ section: InventoryDeviceSection) -> AnyView {
+    private func deviceSection(_ section: InventoryDeviceSection) -> some View {
         let visibleSessions = store.visibleSessions(for: section)
 
-        return AnyView(VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(hostTitle(section.host))
@@ -259,13 +257,12 @@ struct InventoryView: View {
                 .padding(.leading, 8)
                 .padding(.top, 18)
         }
-        )
     }
 
-    private func sessionCard(section: InventoryDeviceSection, session: SessionSummary) -> AnyView {
-        let isFocused = focusedSession?.viewModel.session.id == session.id
+    private func sessionCard(section: InventoryDeviceSection, session: SessionSummary) -> some View {
+        let isConnected = explorerStore.isConnected(sessionID: session.sessionId, hostID: section.host.id)
 
-        return AnyView(VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(session.displayTitle)
@@ -327,27 +324,28 @@ struct InventoryView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    if isFocused {
-                        focusedSession = nil
-                    } else if let token = section.token {
-                        focusedSession = InventoryFocusedSession(
-                            viewModel: SessionViewModel(host: section.host, token: token, session: session, activityStore: activityStore)
-                        )
+                    if isConnected {
+                        if let connected = explorerStore.sessions.first(where: { $0.session.sessionId == session.sessionId && $0.host.id == section.host.id }) {
+                            explorerStore.disconnect(connected)
+                        }
+                    } else {
+                        explorerStore.connect(host: section.host, session: session)
+                        onOpenExplorer()
                     }
                 } label: {
-                    Label(isFocused ? "Disconnect" : "Connect", systemImage: isFocused ? "bolt.slash" : "terminal")
+                    Label(isConnected ? "Disconnect" : "Connect", systemImage: isConnected ? "bolt.slash" : "terminal")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(isFocused ? .gray.opacity(0.7) : inventoryAccent)
+                .tint(isConnected ? .gray.opacity(0.7) : inventoryAccent)
                 .disabled(section.token == nil)
 
                 Button(role: .destructive) {
                     Task {
                         do {
                             try await store.stopSession(hostID: section.host.id, sessionID: session.sessionId)
-                            if focusedSession?.viewModel.session.id == session.id {
-                                focusedSession = nil
+                            if let connected = explorerStore.sessions.first(where: { $0.session.sessionId == session.sessionId && $0.host.id == section.host.id }) {
+                                explorerStore.disconnect(connected)
                             }
                         } catch {
                             inventoryError = error.localizedDescription
@@ -370,7 +368,6 @@ struct InventoryView: View {
         .padding(16)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        )
     }
 
     private func inventoryMetric(title: String, value: String) -> some View {
@@ -451,24 +448,8 @@ struct InventoryView: View {
         }
     }
 
-    private var inventoryBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.04, green: 0.05, blue: 0.06),
-                Color(red: 0.07, green: 0.09, blue: 0.10),
-                Color(red: 0.10, green: 0.12, blue: 0.14)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(alignment: .topTrailing) {
-            Circle()
-                .fill(inventoryAccent.opacity(0.20))
-                .frame(width: 220, height: 220)
-                .blur(radius: 50)
-                .offset(x: 90, y: -20)
-        }
-        .ignoresSafeArea()
+    private var inventoryBackground: Color {
+        Color(red: 0.04, green: 0.05, blue: 0.06)
     }
 
     private var panelBackground: Color {
@@ -477,17 +458,6 @@ struct InventoryView: View {
 
     private var inventoryAccent: Color {
         Color(red: 0.74, green: 0.81, blue: 0.54)
-    }
-}
-
-private struct InventoryFocusedSession: Identifiable {
-    let id: String
-    let viewModel: SessionViewModel
-
-    @MainActor
-    init(viewModel: SessionViewModel) {
-        self.viewModel = viewModel
-        self.id = "\(viewModel.host.id.uuidString)-\(viewModel.session.id)"
     }
 }
 
@@ -544,5 +514,20 @@ private struct CreateSessionSheet: View {
                 }
             }
         }
+    }
+}
+
+#Preview("Inventory") {
+    let context = PreviewAppContext.make()
+    NavigationStack {
+        InventoryView(
+            hostsStore: context.hostsStore,
+            tokenStore: context.tokenStore,
+            activityStore: context.activityStore,
+            explorerStore: context.explorerStore,
+            onOpenExplorer: {},
+            previewStore: context.inventoryStore,
+            autoRefreshOnAppear: false
+        )
     }
 }

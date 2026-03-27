@@ -93,7 +93,8 @@ final class HostsStore: ObservableObject {
 
     func selectDiscoveredHost(_ discoveredHost: DiscoveredHost) {
         let savedMatch = matchingSavedHost(for: discoveredHost.identity, endpoint: discoveredHost.endpoint)
-        let candidate = savedMatch ?? SavedHost(identity: discoveredHost.identity, endpoint: discoveredHost.endpoint)
+        let candidate = (savedMatch ?? SavedHost(identity: discoveredHost.identity, endpoint: discoveredHost.endpoint))
+            .merged(identity: discoveredHost.identity, endpoint: discoveredHost.endpoint, alias: savedMatch?.alias)
         selectedHost = SelectedHostDetail(
             source: .discovered(discoveredHost.identity.hostId),
             host: candidate,
@@ -221,7 +222,7 @@ final class HostsStore: ObservableObject {
     }
 
     private func handleDiscovery(_ message: DiscoveryListener.Message) {
-        let resolvedAddress = message.payload.remoteHost.nilIfEmpty ?? message.sourceAddress
+        let resolvedAddress = Self.preferredDiscoveryAddress(advertisedHost: message.payload.remoteHost, sourceAddress: message.sourceAddress)
         let endpoint = HostEndpoint(
             address: resolvedAddress,
             port: message.payload.remotePort,
@@ -327,6 +328,18 @@ final class HostsStore: ObservableObject {
         }
         return savedHosts.first(where: { $0.address == host.address && $0.port == host.port && $0.useTLS == host.useTLS })
     }
+    private static func preferredDiscoveryAddress(advertisedHost: String, sourceAddress: String) -> String {
+        guard let normalized = advertisedHost.nilIfEmpty else {
+            return sourceAddress
+        }
+
+        switch normalized.lowercased() {
+        case "0.0.0.0", "::", "::0", "localhost", "127.0.0.1":
+            return sourceAddress
+        default:
+            return normalized
+        }
+    }
 }
 
 private extension SavedHost {
@@ -349,5 +362,27 @@ private extension String {
     var nilIfEmpty: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+extension HostsStore {
+    static func previewStore(tokenStore: TokenStore) -> HostsStore {
+        let suiteName = "preview.hosts.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+        defaults.removePersistentDomain(forName: suiteName)
+        let store = HostsStore(defaults: defaults, tokenStore: tokenStore, listener: DiscoveryListener())
+        store.savedHosts = [PreviewFixtures.hostA, PreviewFixtures.hostB]
+        store.discoveredHosts = [PreviewFixtures.discoveredHostA, PreviewFixtures.discoveredHostB]
+        store.selectedHost = SelectedHostDetail(
+            source: .saved(PreviewFixtures.hostA.id),
+            host: PreviewFixtures.hostA,
+            discovery: PreviewFixtures.discoveryA,
+            hostInfo: PreviewFixtures.hostInfoA,
+            lastSeenAt: Date(),
+            isSaved: true,
+            hasToken: true
+        )
+        store.discoveryStatus = "Previewing live discovery"
+        return store
     }
 }

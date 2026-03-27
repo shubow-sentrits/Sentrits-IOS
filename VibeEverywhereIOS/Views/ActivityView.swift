@@ -222,3 +222,9 @@ enum ActivityPalette {
     static let warning = Color(red: 238 / 255, green: 178 / 255, blue: 0)
     static let error = Color(red: 238 / 255, green: 125 / 255, blue: 119 / 255)
 }
+
+#Preview("Activity") {
+    NavigationStack {
+        ActivityView(activityStore: PreviewAppContext.make().activityStore)
+    }
+}

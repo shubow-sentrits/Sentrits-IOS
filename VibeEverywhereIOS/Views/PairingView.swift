@@ -4,8 +4,16 @@ struct PairingView: View {
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
     @ObservedObject var activityStore: ActivityLogStore
+    let autoStartDiscovery: Bool
 
     @StateObject private var connectViewModel = ConnectViewModel()
+
+    init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore, autoStartDiscovery: Bool = true) {
+        self.hostsStore = hostsStore
+        self.tokenStore = tokenStore
+        self.activityStore = activityStore
+        self.autoStartDiscovery = autoStartDiscovery
+    }
 
     var body: some View {
         ZStack {
@@ -26,9 +34,11 @@ struct PairingView: View {
         .navigationTitle("Pairing")
         .navigationBarTitleDisplayMode(.large)
         .task {
+            guard autoStartDiscovery else { return }
             hostsStore.startDiscovery()
         }
         .onDisappear {
+            guard autoStartDiscovery else { return }
             hostsStore.stopDiscovery()
         }
     }
@@ -458,7 +468,7 @@ private struct PairingRequestSection: View {
                 onPaired()
             }
         }
-        .id(host.tokenKey + (alias ?? ""))
+        .id(host.tokenKey + "|" + host.detailLabel + "|" + (alias ?? ""))
     }
 
     private var isApproved: Bool {
@@ -502,5 +512,17 @@ private struct ActionButtonStyle: ButtonStyle {
             .background(fill.opacity(configuration.isPressed ? 0.75 : 1))
             .foregroundStyle(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+#Preview("Pairing") {
+    let context = PreviewAppContext.make()
+    NavigationStack {
+        PairingView(
+            hostsStore: context.hostsStore,
+            tokenStore: context.tokenStore,
+            activityStore: context.activityStore,
+            autoStartDiscovery: false
+        )
     }
 }

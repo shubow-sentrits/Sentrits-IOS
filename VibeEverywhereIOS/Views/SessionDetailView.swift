@@ -2,6 +2,12 @@ import SwiftUI
 
 struct SessionDetailView: View {
     @ObservedObject var viewModel: SessionViewModel
+    let autoActivate: Bool
+
+    init(viewModel: SessionViewModel, autoActivate: Bool = true) {
+        self.viewModel = viewModel
+        self.autoActivate = autoActivate
+    }
 
     var body: some View {
         ZStack {
@@ -23,6 +29,7 @@ struct SessionDetailView: View {
         .navigationTitle(viewModel.session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            guard autoActivate else { return }
             await viewModel.activate()
         }
     }
@@ -243,4 +250,11 @@ private extension Color {
     static let focusedText = Color(red: 0.95, green: 0.95, blue: 0.92)
     static let focusedMuted = Color(red: 0.66, green: 0.69, blue: 0.72)
     static let focusedAccent = Color(red: 0.76, green: 0.83, blue: 0.57)
+}
+
+#Preview("Focused Session") {
+    let context = PreviewAppContext.make()
+    NavigationStack {
+        SessionDetailView(viewModel: context.focusedSessionViewModel, autoActivate: false)
+    }
 }
