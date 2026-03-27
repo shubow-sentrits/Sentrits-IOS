@@ -14,17 +14,20 @@ final class SessionViewModel: ObservableObject {
     let terminal = TerminalEngine()
 
     private let socket: SessionSocket
+    private let activityStore: ActivityLogStore
     private var hasLoadedSnapshot = false
 
-    init(host: SavedHost, token: String, session: SessionSummary) {
+    init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
         self.session = session
+        self.activityStore = activityStore
         self.socket = SessionSocket(host: host)
 
         socket.onStateChange = { [weak self] state in
             Task { @MainActor in
                 self?.socketState = state
+                self?.recordSocketState(state)
             }
         }
 
@@ -74,10 +77,24 @@ final class SessionViewModel: ObservableObject {
         }
         terminal.reset()
         seedTerminalFromSnapshot()
+        activityStore.record(
+            category: .socket,
+            title: "Connecting to session",
+            message: "Opening the live session socket.",
+            hostLabel: host.displayLabel,
+            sessionID: session.sessionId
+        )
         socket.connect(host: host, sessionId: session.sessionId, token: token)
     }
 
     func disconnect() {
+        activityStore.record(
+            category: .socket,
+            title: "Disconnected from session",
+            message: "Closed the session socket from the client.",
+            hostLabel: host.displayLabel,
+            sessionID: session.sessionId
+        )
         socket.disconnect(reason: "Disconnected by client.")
     }
 
@@ -87,10 +104,24 @@ final class SessionViewModel: ObservableObject {
     }
 
     func requestControl() async {
+        activityStore.record(
+            category: .control,
+            title: "Control requested",
+            message: "Asked for remote control of the session.",
+            hostLabel: host.displayLabel,
+            sessionID: session.sessionId
+        )
         await socket.requestControl()
     }
 
     func releaseControl() async {
+        activityStore.record(
+            category: .control,
+            title: "Control released",
+            message: "Released remote control for the session.",
+            hostLabel: host.displayLabel,
+            sessionID: session.sessionId
+        )
         await socket.releaseControl()
     }
 
@@ -176,15 +207,32 @@ final class SessionViewModel: ObservableObject {
         do {
             let client = HostClient(host: host)
             try await client.stopSession(sessionId: session.sessionId, host: host, token: token)
+            activityStore.record(
+                category: .explorer,
+                title: "Session stop requested",
+                message: "Sent a stop request for the focused session.",
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
             await loadSnapshot(force: true)
         } catch {
             lastError = error.localizedDescription
+            activityStore.record(
+                severity: .error,
+                category: .explorer,
+                title: "Session stop failed",
+                message: error.localizedDescription,
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
         }
     }
 
     private func apply(event: SessionSocketEvent) {
         switch event {
         case let .sessionUpdated(metadata):
+            let previousStatus = session.status
+            let previousController = session.controllerKind
             session = SessionSummary(
                 sessionId: metadata.sessionId,
                 provider: metadata.provider,
@@ -220,6 +268,24 @@ final class SessionViewModel: ObservableObject {
                 gitStagedCount: metadata.gitStagedCount,
                 gitUntrackedCount: metadata.gitUntrackedCount
             )
+            if previousStatus != metadata.status {
+                activityStore.record(
+                    category: .explorer,
+                    title: "Session status changed",
+                    message: "Session moved from \(previousStatus) to \(metadata.status).",
+                    hostLabel: host.displayLabel,
+                    sessionID: metadata.sessionId
+                )
+            }
+            if previousController != metadata.controllerKind {
+                activityStore.record(
+                    category: .control,
+                    title: "Control mode changed",
+                    message: "Session control is now \(metadata.controllerKind).",
+                    hostLabel: host.displayLabel,
+                    sessionID: metadata.sessionId
+                )
+            }
         case let .terminalOutput(output):
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
@@ -259,8 +325,24 @@ final class SessionViewModel: ObservableObject {
                 gitUntrackedCount: session.gitUntrackedCount
             )
             socketState = .disconnected("Session exited.")
+            activityStore.record(
+                severity: .warning,
+                category: .explorer,
+                title: "Session exited",
+                message: "The remote session ended with status \(payload.status).",
+                hostLabel: host.displayLabel,
+                sessionID: payload.sessionId
+            )
         case let .error(payload):
             lastError = "\(payload.code): \(payload.message)"
+            activityStore.record(
+                severity: .error,
+                category: .socket,
+                title: "Session error",
+                message: "\(payload.code): \(payload.message)",
+                hostLabel: host.displayLabel,
+                sessionID: payload.sessionId ?? session.sessionId
+            )
         }
     }
 
@@ -309,5 +391,29 @@ final class SessionViewModel: ObservableObject {
             return
         }
         terminal.ingestBase64(Data(tail.utf8).base64EncodedString(), seqEnd: snapshot?.currentSequence ?? 0)
+    }
+
+    private func recordSocketState(_ state: SessionSocket.ConnectionState) {
+        switch state {
+        case .idle, .connecting:
+            return
+        case .connected:
+            activityStore.record(
+                category: .socket,
+                title: "Session connected",
+                message: "Live socket is connected.",
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
+        case let .disconnected(reason):
+            activityStore.record(
+                severity: reason == nil ? .info : .warning,
+                category: .socket,
+                title: "Session disconnected",
+                message: reason ?? "The live socket disconnected.",
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
+        }
     }
 }

@@ -3,11 +3,12 @@ import SwiftUI
 struct ConnectView: View {
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
 
     var body: some View {
         TabView {
             NavigationStack {
-                PairingView(hostsStore: hostsStore, tokenStore: tokenStore)
+                PairingView(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
             }
             .tabItem {
                 Label("Pairing", systemImage: "dot.radiowaves.left.and.right")
@@ -34,10 +35,7 @@ struct ConnectView: View {
             }
 
             NavigationStack {
-                ShellPlaceholderView(
-                    title: "Activity",
-                    subtitle: "Activity logging hooks can build on the new discovery and pairing lifecycle."
-                )
+                ActivityView(activityStore: activityStore)
             }
             .tabItem {
                 Label("Activity", systemImage: "clock.arrow.circlepath")

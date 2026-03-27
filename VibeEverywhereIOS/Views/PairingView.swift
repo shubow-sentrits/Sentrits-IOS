@@ -3,6 +3,7 @@ import SwiftUI
 struct PairingView: View {
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var connectViewModel = ConnectViewModel()
 
@@ -81,6 +82,12 @@ struct PairingView: View {
                     ForEach(hostsStore.discoveredHosts) { host in
                         Button {
                             hostsStore.selectDiscoveredHost(host)
+                            activityStore.record(
+                                category: .system,
+                                title: "Discovered host selected",
+                                message: "Inspecting \(host.displayName) from live discovery.",
+                                hostLabel: host.displayName
+                            )
                         } label: {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 5) {
@@ -152,6 +159,27 @@ struct PairingView: View {
                     guard let endpoint = connectViewModel.makeEndpoint() else { return }
                     Task {
                         await hostsStore.verifyManualHost(endpoint: endpoint, alias: connectViewModel.alias)
+                        switch hostsStore.verificationState {
+                        case .idle:
+                            if let selectedHost = hostsStore.selectedHost {
+                                activityStore.record(
+                                    category: .system,
+                                    title: "Manual host verified",
+                                    message: "Verified \(selectedHost.host.displayLabel) and loaded host details.",
+                                    hostLabel: selectedHost.host.displayLabel
+                                )
+                            }
+                        case let .failed(message):
+                            activityStore.record(
+                                severity: .warning,
+                                category: .system,
+                                title: "Manual host verification failed",
+                                message: message,
+                                hostLabel: endpoint.displayAddress
+                            )
+                        case .verifying:
+                            break
+                        }
                     }
                 } label: {
                     HStack {
@@ -195,6 +223,12 @@ struct PairingView: View {
                             Button {
                                 connectViewModel.populate(from: host)
                                 hostsStore.selectSavedHost(host)
+                                activityStore.record(
+                                    category: .system,
+                                    title: "Saved host selected",
+                                    message: "Loaded the saved host into the pairing detail view.",
+                                    hostLabel: host.displayLabel
+                                )
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(host.displayLabel)
@@ -261,6 +295,12 @@ struct PairingView: View {
                     if !selectedHost.isSaved {
                         Button("Save Device") {
                             hostsStore.saveSelectedHost(alias: connectViewModel.alias)
+                            activityStore.record(
+                                category: .system,
+                                title: "Host saved",
+                                message: "Saved the selected host for future access.",
+                                hostLabel: selectedHost.host.displayLabel
+                            )
                         }
                         .buttonStyle(ActionButtonStyle(fill: Color.white.opacity(0.10)))
                     }
@@ -268,9 +308,16 @@ struct PairingView: View {
                     PairingRequestSection(
                         host: selectedHost.host,
                         tokenStore: tokenStore,
+                        activityStore: activityStore,
                         alias: connectViewModel.alias,
                         onPaired: {
                             hostsStore.markSelectedHostPaired(alias: connectViewModel.alias)
+                            activityStore.record(
+                                category: .pairing,
+                                title: "Host trusted",
+                                message: "Promoted the selected host into saved trusted devices.",
+                                hostLabel: selectedHost.host.displayLabel
+                            )
                         }
                     )
                 }
@@ -343,17 +390,19 @@ struct PairingView: View {
 private struct PairingRequestSection: View {
     let host: SavedHost
     let tokenStore: TokenStore
+    @ObservedObject var activityStore: ActivityLogStore
     let alias: String?
     let onPaired: () -> Void
 
     @StateObject private var viewModel: PairingViewModel
 
-    init(host: SavedHost, tokenStore: TokenStore, alias: String?, onPaired: @escaping () -> Void) {
+    init(host: SavedHost, tokenStore: TokenStore, activityStore: ActivityLogStore, alias: String?, onPaired: @escaping () -> Void) {
         self.host = host
         self.tokenStore = tokenStore
+        self.activityStore = activityStore
         self.alias = alias
         self.onPaired = onPaired
-        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, tokenStore: tokenStore))
+        _viewModel = StateObject(wrappedValue: PairingViewModel(host: host, tokenStore: tokenStore, activityStore: activityStore))
     }
 
     var body: some View {

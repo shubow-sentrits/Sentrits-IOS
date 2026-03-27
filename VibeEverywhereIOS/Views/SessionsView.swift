@@ -4,16 +4,18 @@ struct SessionsView: View {
     let host: SavedHost
     let token: String
     let onConnected: () -> Void
+    @ObservedObject var activityStore: ActivityLogStore
 
     @StateObject private var viewModel: SessionsViewModel
     @State private var draftGroupName = ""
     @State private var isCreateGroupPresented = false
 
-    init(host: SavedHost, token: String, onConnected: @escaping () -> Void) {
+    init(host: SavedHost, token: String, onConnected: @escaping () -> Void, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
         self.onConnected = onConnected
-        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token))
+        self.activityStore = activityStore
+        _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token, activityStore: activityStore))
     }
 
     var body: some View {

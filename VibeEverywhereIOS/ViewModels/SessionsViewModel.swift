@@ -14,14 +14,16 @@ final class SessionsViewModel: ObservableObject {
 
     let host: SavedHost
     let token: String
+    private let activityStore: ActivityLogStore
 
     private var localGroupTabs: [String] = []
     private var hiddenSessionIDs: Set<String> = []
     private var refreshTask: Task<Void, Never>?
 
-    init(host: SavedHost, token: String) {
+    init(host: SavedHost, token: String, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
+        self.activityStore = activityStore
     }
 
     deinit {
@@ -73,8 +75,21 @@ final class SessionsViewModel: ObservableObject {
             let fetchedSessions = try await sessionsTask
             synchronize(with: fetchedSessions.filter(\.isExplorerEligible))
             errorMessage = nil
+            activityStore.record(
+                category: .inventory,
+                title: "Explorer refreshed",
+                message: "Loaded \(fetchedSessions.count) session\(fetchedSessions.count == 1 ? "" : "s").",
+                hostLabel: host.displayLabel
+            )
         } catch {
             errorMessage = error.localizedDescription
+            activityStore.record(
+                severity: .warning,
+                category: .inventory,
+                title: "Explorer refresh failed",
+                message: error.localizedDescription,
+                hostLabel: host.displayLabel
+            )
         }
     }
 
@@ -154,7 +169,7 @@ final class SessionsViewModel: ObservableObject {
                     existing.connect()
                 }
             } else {
-                let viewModel = SessionViewModel(host: host, token: token, session: session)
+                let viewModel = SessionViewModel(host: host, token: token, session: session, activityStore: activityStore)
                 nextViewModels.append(viewModel)
                 if !hiddenSessionIDs.contains(session.sessionId) {
                     viewModel.connect()
@@ -196,10 +211,33 @@ final class SessionsViewModel: ObservableObject {
             viewModel.updateGroupTags(response.groupTags)
             if mode == .add {
                 localGroupTabs.append(contentsOf: response.groupTags)
+                activityStore.record(
+                    category: .explorer,
+                    title: "Group tag added",
+                    message: "Updated session groups to \(response.groupTags.joined(separator: ", ")).",
+                    hostLabel: host.displayLabel,
+                    sessionID: viewModel.session.sessionId
+                )
+            } else if mode == .remove {
+                activityStore.record(
+                    category: .explorer,
+                    title: "Group tag removed",
+                    message: "Updated session groups to \(response.groupTags.joined(separator: ", ")).",
+                    hostLabel: host.displayLabel,
+                    sessionID: viewModel.session.sessionId
+                )
             }
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+            activityStore.record(
+                severity: .warning,
+                category: .explorer,
+                title: "Group tag update failed",
+                message: error.localizedDescription,
+                hostLabel: host.displayLabel,
+                sessionID: viewModel.session.sessionId
+            )
         }
     }
 }
