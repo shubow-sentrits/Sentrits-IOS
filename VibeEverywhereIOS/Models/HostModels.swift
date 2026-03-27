@@ -1,30 +1,21 @@
 import Foundation
 
-struct SavedHost: Codable, Identifiable, Equatable, Hashable {
-    let id: UUID
-    var name: String
+struct HostEndpoint: Codable, Equatable, Hashable {
     var address: String
     var port: Int
     var useTLS: Bool
     var allowSelfSignedTLS: Bool
-    var lastConnectedAt: Date?
 
     init(
-        id: UUID = UUID(),
-        name: String,
         address: String,
         port: Int,
         useTLS: Bool = false,
-        allowSelfSignedTLS: Bool = false,
-        lastConnectedAt: Date? = nil
+        allowSelfSignedTLS: Bool = false
     ) {
-        self.id = id
-        self.name = name
         self.address = address
         self.port = port
         self.useTLS = useTLS
         self.allowSelfSignedTLS = allowSelfSignedTLS
-        self.lastConnectedAt = lastConnectedAt
     }
 
     var baseURL: URL {
@@ -37,18 +28,170 @@ struct SavedHost: Codable, Identifiable, Equatable, Hashable {
         return URL(string: "\(scheme)://\(address):\(port)")!
     }
 
-    var tokenKey: String {
+    var displayAddress: String {
         "\(address):\(port)"
+    }
+}
+
+struct SavedHost: Codable, Identifiable, Equatable, Hashable {
+    let id: UUID
+    var hostId: String?
+    var displayName: String
+    var alias: String?
+    var address: String
+    var port: Int
+    var useTLS: Bool
+    var allowSelfSignedTLS: Bool
+    var lastConnectedAt: Date?
+
+    init(
+        id: UUID = UUID(),
+        hostId: String? = nil,
+        displayName: String,
+        alias: String? = nil,
+        address: String,
+        port: Int,
+        useTLS: Bool = false,
+        allowSelfSignedTLS: Bool = false,
+        lastConnectedAt: Date? = nil
+    ) {
+        self.id = id
+        self.hostId = hostId?.trimmedNilIfEmpty
+        self.displayName = displayName
+        self.alias = alias?.trimmedNilIfEmpty
+        self.address = address
+        self.port = port
+        self.useTLS = useTLS
+        self.allowSelfSignedTLS = allowSelfSignedTLS
+        self.lastConnectedAt = lastConnectedAt
+    }
+
+    init(
+        id: UUID = UUID(),
+        identity: DiscoveryInfo,
+        endpoint: HostEndpoint,
+        alias: String? = nil,
+        lastConnectedAt: Date? = nil
+    ) {
+        self.init(
+            id: id,
+            hostId: identity.hostId,
+            displayName: identity.displayName,
+            alias: alias,
+            address: endpoint.address,
+            port: endpoint.port,
+            useTLS: endpoint.useTLS || identity.tls,
+            allowSelfSignedTLS: endpoint.allowSelfSignedTLS,
+            lastConnectedAt: lastConnectedAt
+        )
+    }
+
+    var baseURL: URL {
+        endpoint.baseURL
+    }
+
+    var websocketURL: URL {
+        endpoint.websocketURL
+    }
+
+    var tokenKey: String {
+        if let hostId = hostId?.trimmedNilIfEmpty {
+            return "host:\(hostId)"
+        }
+        return "endpoint:\(address):\(port):\(useTLS ? 1 : 0)"
+    }
+
+    var endpoint: HostEndpoint {
+        HostEndpoint(address: address, port: port, useTLS: useTLS, allowSelfSignedTLS: allowSelfSignedTLS)
     }
 
     var displayLabel: String {
-        name.isEmpty ? "\(address):\(port)" : "\(name) (\(address):\(port))"
+        if let alias = alias?.trimmedNilIfEmpty {
+            return "\(alias) · \(displayName)"
+        }
+        return displayName
+    }
+
+    var detailLabel: String {
+        endpoint.displayAddress
+    }
+
+    var secondaryLabel: String {
+        if alias?.trimmedNilIfEmpty != nil {
+            return "\(displayName) · \(detailLabel)"
+        }
+        return detailLabel
+    }
+
+    func merged(
+        identity: DiscoveryInfo? = nil,
+        hostInfo: HostInfo? = nil,
+        endpoint: HostEndpoint? = nil,
+        alias: String? = nil
+    ) -> SavedHost {
+        SavedHost(
+            id: id,
+            hostId: identity?.hostId ?? hostInfo?.hostId ?? hostId,
+            displayName: identity?.displayName ?? hostInfo?.displayName ?? displayName,
+            alias: alias ?? self.alias,
+            address: endpoint?.address ?? self.address,
+            port: endpoint?.port ?? self.port,
+            useTLS: endpoint?.useTLS ?? hostInfo?.tls?.enabled ?? identity?.tls ?? self.useTLS,
+            allowSelfSignedTLS: endpoint?.allowSelfSignedTLS ?? self.allowSelfSignedTLS,
+            lastConnectedAt: lastConnectedAt
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case hostId
+        case displayName
+        case alias
+        case address
+        case port
+        case useTLS
+        case allowSelfSignedTLS
+        case lastConnectedAt
+        case name
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        hostId = try container.decodeIfPresent(String.self, forKey: .hostId)?.trimmedNilIfEmpty
+        let legacyName = try container.decodeIfPresent(String.self, forKey: .name)?.trimmedNilIfEmpty
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName)?.trimmedNilIfEmpty
+            ?? legacyName
+            ?? "Unknown Host"
+        alias = try container.decodeIfPresent(String.self, forKey: .alias)?.trimmedNilIfEmpty
+        address = try container.decode(String.self, forKey: .address)
+        port = try container.decode(Int.self, forKey: .port)
+        useTLS = try container.decodeIfPresent(Bool.self, forKey: .useTLS) ?? false
+        allowSelfSignedTLS = try container.decodeIfPresent(Bool.self, forKey: .allowSelfSignedTLS) ?? false
+        lastConnectedAt = try container.decodeIfPresent(Date.self, forKey: .lastConnectedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(hostId, forKey: .hostId)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encodeIfPresent(alias, forKey: .alias)
+        try container.encode(address, forKey: .address)
+        try container.encode(port, forKey: .port)
+        try container.encode(useTLS, forKey: .useTLS)
+        try container.encode(allowSelfSignedTLS, forKey: .allowSelfSignedTLS)
+        try container.encodeIfPresent(lastConnectedAt, forKey: .lastConnectedAt)
     }
 }
 
 struct HostInfo: Codable {
     let hostId: String?
     let displayName: String
+    let adminHost: String?
+    let adminPort: Int?
+    let remoteHost: String?
+    let remotePort: Int?
     let version: String?
     let capabilities: [String]?
     let pairingMode: String?
@@ -58,6 +201,38 @@ struct HostInfo: Codable {
 struct HostTLSInfo: Codable {
     let enabled: Bool
     let mode: String?
+}
+
+struct DiscoveryInfo: Codable, Equatable, Hashable {
+    let hostId: String
+    let displayName: String
+    let remoteHost: String
+    let remotePort: Int
+    let protocolVersion: String?
+    let tls: Bool
+
+    var endpoint: HostEndpoint {
+        HostEndpoint(address: remoteHost, port: remotePort, useTLS: tls)
+    }
+}
+
+struct DiscoveredHost: Identifiable, Equatable, Hashable {
+    let identity: DiscoveryInfo
+    let endpoint: HostEndpoint
+    let announcedAddress: String
+    var lastSeenAt: Date
+
+    var id: String { identity.hostId }
+
+    var displayName: String { identity.displayName }
+
+    var age: TimeInterval {
+        Date().timeIntervalSince(lastSeenAt)
+    }
+
+    func refreshed(at date: Date, announcedAddress: String, endpoint: HostEndpoint) -> DiscoveredHost {
+        DiscoveredHost(identity: identity, endpoint: endpoint, announcedAddress: announcedAddress, lastSeenAt: date)
+    }
 }
 
 struct PairingRequestPayload: Codable {
@@ -76,17 +251,12 @@ struct PairingClaimPayload: Codable {
     let code: String
 }
 
-struct PairingClaimPendingResponse: Codable {
-    let status: String
-}
-
-struct PairingRecordResponse: Codable {
+struct PairingClaimResponse: Codable {
     let deviceId: String?
     let deviceName: String?
     let deviceType: String?
-    let token: String
+    let token: String?
     let status: String
-    let approvedAtUnixMs: Int?
 }
 
 struct SessionSummary: Codable, Identifiable, Hashable {
@@ -99,4 +269,11 @@ struct SessionSummary: Codable, Identifiable, Hashable {
     let controllerClientId: String?
 
     var id: String { sessionId }
+}
+
+private extension String {
+    var trimmedNilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }

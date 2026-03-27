@@ -15,6 +15,8 @@
 		A00000000000000000000006 /* HostClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* HostClient.swift */; };
 		A00000000000000000000007 /* TerminalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* TerminalEngine.swift */; };
 		A00000000000000000000008 /* SessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* SessionSocket.swift */; };
+		A0000000000000000000003B /* DiscoveryListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* DiscoveryListener.swift */; };
+		A0000000000000000000003C /* HostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* HostsStore.swift */; };
 		A00000000000000000000009 /* ConnectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ConnectViewModel.swift */; };
 		A0000000000000000000000A /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* PairingViewModel.swift */; };
 		A0000000000000000000000B /* SessionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* SessionsViewModel.swift */; };
@@ -35,6 +37,8 @@
 		A00000000000000000000016 /* HostClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClient.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* TerminalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalEngine.swift; sourceTree = "<group>"; };
 		A00000000000000000000018 /* SessionSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSocket.swift; sourceTree = "<group>"; };
+		A00000000000000000000039 /* DiscoveryListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryListener.swift; sourceTree = "<group>"; };
+		A0000000000000000000003A /* HostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostsStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000019 /* ConnectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001A /* PairingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001B /* SessionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsViewModel.swift; sourceTree = "<group>"; };
@@ -105,6 +109,8 @@
 				A00000000000000000000016 /* HostClient.swift */,
 				A00000000000000000000017 /* TerminalEngine.swift */,
 				A00000000000000000000018 /* SessionSocket.swift */,
+				A00000000000000000000039 /* DiscoveryListener.swift */,
+				A0000000000000000000003A /* HostsStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -217,6 +223,8 @@
 				A00000000000000000000006 /* HostClient.swift in Sources */,
 				A00000000000000000000007 /* TerminalEngine.swift in Sources */,
 				A00000000000000000000008 /* SessionSocket.swift in Sources */,
+				A0000000000000000000003B /* DiscoveryListener.swift in Sources */,
+				A0000000000000000000003C /* HostsStore.swift in Sources */,
 				A00000000000000000000009 /* ConnectViewModel.swift in Sources */,
 				A0000000000000000000000A /* PairingViewModel.swift in Sources */,
 				A0000000000000000000000B /* SessionsViewModel.swift in Sources */,
