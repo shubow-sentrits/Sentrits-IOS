@@ -86,40 +86,34 @@ struct SessionDetailView: View {
     }
 
     private var headerBar: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(viewModel.session.displayTitle)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.focusedText)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                compactStatusBadge(viewModel.session.status, tone: sessionStatusColor(viewModel.session.status))
+                compactStatusBadge(socketLabel(viewModel.socketState), tone: socketColor(viewModel.socketState))
+                compactStatusBadge(viewModel.session.controllerKind.capitalized, tone: viewModel.canSendInput ? .green : .orange)
 
-                HStack(spacing: 8) {
-                    compactStatusBadge(viewModel.session.status, tone: sessionStatusColor(viewModel.session.status))
-                    compactStatusBadge(socketLabel(viewModel.socketState), tone: socketColor(viewModel.socketState))
-                    compactStatusBadge(viewModel.session.controllerKind.capitalized, tone: viewModel.canSendInput ? .green : .orange)
+                Spacer()
+
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                        isContextPanelPresented.toggle()
+                    }
+                } label: {
+                    Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.focusedText)
+                        .frame(width: 34, height: 34)
+                        .background(Color.focusedPanelSoft.opacity(0.9))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-
-                Text(viewModel.session.workspaceRoot)
-                    .font(.caption)
-                    .foregroundStyle(Color.focusedMuted)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                .buttonStyle(.plain)
             }
 
-            Spacer()
-
-            Button {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                    isContextPanelPresented.toggle()
-                }
-            } label: {
-                Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.focusedText)
-                    .frame(width: 40, height: 40)
-                    .background(Color.focusedPanelSoft.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            Text(viewModel.session.workspaceRoot)
+                .font(.caption)
+                .foregroundStyle(Color.focusedMuted)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
     }
 

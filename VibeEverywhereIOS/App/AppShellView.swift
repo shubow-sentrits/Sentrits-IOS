@@ -6,6 +6,8 @@ struct AppShellView: View {
     @ObservedObject var activityStore: ActivityLogStore
 
     @State private var selectedTab = 0
+    @State private var focusedSessionID: String?
+    @State private var focusedHostID: UUID?
     @StateObject private var explorerStore: ExplorerWorkspaceStore
 
     init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
@@ -46,7 +48,13 @@ struct AppShellView: View {
             }
 
             NavigationStack {
-                ExplorerWorkspaceView(explorerStore: explorerStore)
+                ExplorerWorkspaceView(
+                    explorerStore: explorerStore,
+                    onFocusSession: { sessionID, hostID in
+                        focusedSessionID = sessionID
+                        focusedHostID = hostID
+                    }
+                )
             }
             .tag(2)
             .tabItem {
@@ -62,12 +70,35 @@ struct AppShellView: View {
             }
         }
         .tint(ActivityPalette.primary)
+        .fullScreenCover(isPresented: Binding(
+            get: { focusedSessionViewModel != nil },
+            set: { if !$0 { clearFocusedSession() } }
+        )) {
+            if let viewModel = focusedSessionViewModel {
+                NavigationStack {
+                    SessionDetailView(viewModel: viewModel) {
+                        explorerStore.disconnect(viewModel)
+                        clearFocusedSession()
+                    }
+                }
+            }
+        }
         .task {
             await explorerStore.syncConnectedHosts()
         }
         .onChange(of: hostsStore.savedHosts) {
             Task { await explorerStore.syncConnectedHosts() }
         }
+    }
+
+    private var focusedSessionViewModel: SessionViewModel? {
+        guard let focusedSessionID, let focusedHostID else { return nil }
+        return explorerStore.sessionViewModel(sessionID: focusedSessionID, hostID: focusedHostID)
+    }
+
+    private func clearFocusedSession() {
+        focusedSessionID = nil
+        focusedHostID = nil
     }
 }
 
@@ -102,6 +133,10 @@ final class ExplorerWorkspaceStore: ObservableObject {
 
     func isConnected(sessionID: String, hostID: UUID) -> Bool {
         sessions.contains { $0.session.sessionId == sessionID && $0.host.id == hostID }
+    }
+
+    func sessionViewModel(sessionID: String, hostID: UUID) -> SessionViewModel? {
+        sessions.first { $0.session.sessionId == sessionID && $0.host.id == hostID }
     }
 
     func connect(host: SavedHost, session: SessionSummary) {
@@ -244,10 +279,9 @@ final class ExplorerWorkspaceStore: ObservableObject {
 
 private struct ExplorerWorkspaceView: View {
     @ObservedObject var explorerStore: ExplorerWorkspaceStore
+    let onFocusSession: (String, UUID) -> Void
     @State private var draftGroupName = ""
     @State private var isCreateGroupPresented = false
-    @State private var focusedSessionID: String?
-    @State private var focusedHostID: UUID?
 
     var body: some View {
         ZStack {
@@ -272,17 +306,6 @@ private struct ExplorerWorkspaceView: View {
             createGroupSheet
                 .presentationDetents([.height(240)])
         }
-        .navigationDestination(isPresented: Binding(
-            get: { focusedBinding.wrappedValue != nil },
-            set: { if !$0 { focusedBinding.wrappedValue = nil } }
-        )) {
-            if let viewModel = focusedBinding.wrappedValue {
-                SessionDetailView(viewModel: viewModel) {
-                    explorerStore.disconnect(viewModel)
-                    focusedBinding.wrappedValue = nil
-                }
-            }
-        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -300,20 +323,6 @@ private struct ExplorerWorkspaceView: View {
         } message: {
             Text(explorerStore.errorMessage ?? "")
         }
-    }
-
-    private var focusedBinding: Binding<SessionViewModel?> {
-        Binding(
-            get: {
-                explorerStore.sessions.first {
-                    $0.session.sessionId == focusedSessionID && $0.host.id == focusedHostID
-                }
-            },
-            set: {
-                focusedSessionID = $0?.session.sessionId
-                focusedHostID = $0?.host.id
-            }
-        )
     }
 
     private var heroPanel: some View {
@@ -401,8 +410,7 @@ private struct ExplorerWorkspaceView: View {
                 Spacer()
 
                 Button {
-                    focusedSessionID = sessionViewModel.session.sessionId
-                    focusedHostID = sessionViewModel.host.id
+                    onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
                 } label: {
                     Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
                         .font(.footnote.weight(.semibold))
@@ -431,8 +439,7 @@ private struct ExplorerWorkspaceView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    focusedSessionID = sessionViewModel.session.sessionId
-                    focusedHostID = sessionViewModel.host.id
+                    onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
                 } label: {
                     Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
                         .font(.caption.weight(.bold))
@@ -650,7 +657,7 @@ extension ExplorerWorkspaceStore {
 #Preview("Explorer") {
     let context = PreviewAppContext.make()
     NavigationStack {
-        ExplorerWorkspaceView(explorerStore: context.explorerStore)
+        ExplorerWorkspaceView(explorerStore: context.explorerStore, onFocusSession: { _, _ in })
     }
 }
 
