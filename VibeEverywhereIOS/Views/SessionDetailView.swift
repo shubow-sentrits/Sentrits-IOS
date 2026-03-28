@@ -57,6 +57,7 @@ struct SessionDetailView: View {
                     .zIndex(2)
             }
         }
+        .padding(.top, -10)
         .navigationTitle(viewModel.session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -168,12 +169,12 @@ struct SessionDetailView: View {
             Spacer(minLength: 8)
 
             if viewModel.canSendInput {
-                Button("Release Control") {
+                Button("Release") {
                     Task { await viewModel.releaseControl() }
                 }
                 .buttonStyle(.bordered)
                 .tint(Color.focusedAccent)
-                .frame(height: 34)
+                .frame(height: 24)
 
                 Button(role: .destructive) {
                     Task { await viewModel.stopSession() }
@@ -182,14 +183,14 @@ struct SessionDetailView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.red.opacity(0.9))
-                .frame(height: 34)
+                .frame(height: 24)
             } else {
                 Button("Request Control") {
                     Task { await viewModel.requestControl() }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.focusedAccent)
-                .frame(height: 34)
+                .frame(height: 24)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -431,7 +432,7 @@ private struct FocusedLayoutMetrics {
     let bottomPadding: CGFloat = 10
     let verticalSpacing: CGFloat = 10
     let headerHeight: CGFloat = 58
-    let modeBarHeight: CGFloat = 76
+    let modeBarHeight: CGFloat = 68
     let inputBarHeight: CGFloat = 114
 }
 
