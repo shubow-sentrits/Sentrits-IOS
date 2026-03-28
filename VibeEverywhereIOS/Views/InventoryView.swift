@@ -124,12 +124,8 @@ struct InventoryView: View {
             partial + section.sessions.filter { !$0.isEnded }.count
         }
 
-        return VStack(alignment: .leading, spacing: 16) {
-            Text("Device inventory")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.94))
-
-            Text("Sessions are grouped by paired device. Create and stop them here, then connect them into Explorer for live previews.")
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Create, stop, and connect sessions by paired device.")
                 .font(.subheadline)
                 .foregroundStyle(Color.white.opacity(0.68))
 
@@ -139,16 +135,9 @@ struct InventoryView: View {
                 inventoryMetric(title: "Live", value: "\(liveCount)")
             }
         }
-        .padding(22)
+        .padding(18)
         .background(panelBackground.opacity(0.92))
-        .overlay(alignment: .topTrailing) {
-            Circle()
-                .fill(inventoryAccent.opacity(0.28))
-                .frame(width: 140, height: 140)
-                .blur(radius: 32)
-                .offset(x: 30, y: -40)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var controlsRow: some View {
@@ -324,13 +313,15 @@ struct InventoryView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    if isConnected {
-                        if let connected = explorerStore.sessions.first(where: { $0.session.sessionId == session.sessionId && $0.host.id == section.host.id }) {
-                            explorerStore.disconnect(connected)
+                    Task { @MainActor in
+                        if isConnected {
+                            if let connected = explorerStore.sessions.first(where: { $0.session.sessionId == session.sessionId && $0.host.id == section.host.id }) {
+                                explorerStore.disconnect(connected)
+                            }
+                        } else {
+                            explorerStore.connect(host: section.host, session: session)
+                            onOpenExplorer()
                         }
-                    } else {
-                        explorerStore.connect(host: section.host, session: session)
-                        onOpenExplorer()
                     }
                 } label: {
                     Label(isConnected ? "Disconnect" : "Connect", systemImage: isConnected ? "bolt.slash" : "terminal")

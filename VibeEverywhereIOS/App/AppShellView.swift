@@ -316,12 +316,8 @@ private struct ExplorerWorkspaceView: View {
     }
 
     private var heroPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Connected Sessions")
-                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                .foregroundStyle(Color.explorerHighlight)
-
-            Text("Explorer only shows live connected sessions. Connect from Inventory, then focus here when you need the larger terminal view.")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Connected sessions stay here. Focus one when you need the larger terminal.")
                 .font(.subheadline)
                 .foregroundStyle(Color.explorerMuted)
 
@@ -330,7 +326,7 @@ private struct ExplorerWorkspaceView: View {
                 explorerMetric(value: "\(max(0, explorerStore.groupTabs.count - 1))", label: "Groups")
             }
         }
-        .padding(20)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.explorerPanel)
         .overlay(
@@ -421,18 +417,29 @@ private struct ExplorerWorkspaceView: View {
                 onInput: { _ in },
                 onResize: { _ in }
             )
-            .frame(height: 168)
+            .frame(height: 218)
 
             HStack(spacing: 8) {
-                explorerPill(sessionViewModel.session.status, tone: sessionTone(for: sessionViewModel.session.status))
-                explorerPill(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
-                explorerPill(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
+                explorerTag(sessionViewModel.session.status, tone: sessionTone(for: sessionViewModel.session.status))
+                explorerTag(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
+                explorerTag(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
-                    explorerPill(branch, tone: Color.explorerAccent.opacity(0.8))
+                    explorerTag(branch, tone: Color.explorerAccent.opacity(0.8))
                 }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Button {
+                    focusedSessionID = sessionViewModel.session.sessionId
+                    focusedHostID = sessionViewModel.host.id
+                } label: {
+                    Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
+                        .font(.caption.weight(.bold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.explorerAccent)
+                .controlSize(.small)
+
                 Button(sessionViewModel.canSendInput ? "Release" : "Request Control") {
                     Task {
                         if sessionViewModel.canSendInput {
@@ -442,15 +449,34 @@ private struct ExplorerWorkspaceView: View {
                         }
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .tint(Color.explorerHighlight)
+                .controlSize(.small)
 
+                Spacer()
+
+                Button("Stop", role: .destructive) {
+                    Task { await explorerStore.stop(sessionViewModel) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button("Disconnect") {
+                    explorerStore.disconnect(sessionViewModel)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            HStack(spacing: 8) {
                 if explorerStore.selectedGroupTag != "all",
                    !sessionViewModel.session.normalizedGroupTags.contains(explorerStore.selectedGroupTag) {
                     Button("Add To Group") {
                         Task { await explorerStore.addSelectedGroup(to: sessionViewModel) }
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.explorerHighlight.opacity(0.92))
+                    .controlSize(.small)
                 }
 
                 Menu("Groups") {
@@ -460,7 +486,9 @@ private struct ExplorerWorkspaceView: View {
                         }
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
+                .tint(Color.explorerPanelSoft)
+                .controlSize(.small)
 
                 Spacer()
 
@@ -474,11 +502,11 @@ private struct ExplorerWorkspaceView: View {
                                     HStack(spacing: 6) {
                                         Text("#\(tag)")
                                         Image(systemName: "minus.circle.fill")
-                                            .font(.caption)
+                                            .font(.caption2)
                                     }
                                     .font(.caption.weight(.medium))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 7)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 6)
                                     .background(Color.explorerPanelSoft)
                                     .foregroundStyle(Color.explorerText)
                                     .clipShape(Capsule())
@@ -488,18 +516,6 @@ private struct ExplorerWorkspaceView: View {
                         }
                     }
                 }
-            }
-
-            HStack(spacing: 10) {
-                Button("Disconnect") {
-                    explorerStore.disconnect(sessionViewModel)
-                }
-                .buttonStyle(.bordered)
-
-                Button("Stop", role: .destructive) {
-                    Task { await explorerStore.stop(sessionViewModel) }
-                }
-                .buttonStyle(.bordered)
             }
         }
         .padding(18)
@@ -557,7 +573,7 @@ private struct ExplorerWorkspaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func explorerPill(_ text: String, tone: Color) -> some View {
+    private func explorerTag(_ text: String, tone: Color) -> some View {
         Text(text)
             .font(.caption.weight(.semibold))
             .foregroundStyle(tone)

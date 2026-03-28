@@ -26,6 +26,36 @@ final class SessionsViewModel: ObservableObject {
         self.activityStore = activityStore
     }
 
+    init(
+        previewHost host: SavedHost,
+        token: String,
+        activityStore: ActivityLogStore,
+        hostInfo: HostInfo?,
+        sessions: [SessionSummary],
+        selectedGroupTag: String = "all"
+    ) {
+        self.host = host
+        self.token = token
+        self.activityStore = activityStore
+        self.hostInfo = hostInfo
+        self.selectedGroupTag = selectedGroupTag
+
+        self.sessionViewModels = sessions.map { session in
+            let viewModel = SessionViewModel(host: host, token: token, session: session, activityStore: activityStore)
+            viewModel.socketState = .connected
+            if session.sessionId == PreviewFixtures.sessionA.sessionId {
+                viewModel.snapshot = PreviewFixtures.snapshot
+                if let tail = PreviewFixtures.snapshot.recentTerminalTail,
+                   let data = tail.data(using: .utf8) {
+                    viewModel.terminal.ingestBase64(data.base64EncodedString(), seqStart: 0, seqEnd: PreviewFixtures.snapshot.currentSequence ?? 0)
+                }
+            } else if let data = "Ready for focus view\nAwaiting next action\n".data(using: .utf8) {
+                viewModel.terminal.ingestBase64(data.base64EncodedString(), seqStart: 0, seqEnd: session.currentSequence ?? 0)
+            }
+            return viewModel
+        }
+    }
+
     deinit {
         refreshTask?.cancel()
     }

@@ -9,13 +9,31 @@ struct SessionsView: View {
     @StateObject private var viewModel: SessionsViewModel
     @State private var draftGroupName = ""
     @State private var isCreateGroupPresented = false
+    private let autoStart: Bool
 
     init(host: SavedHost, token: String, onConnected: @escaping () -> Void, activityStore: ActivityLogStore) {
         self.host = host
         self.token = token
         self.onConnected = onConnected
         self.activityStore = activityStore
+        self.autoStart = true
         _viewModel = StateObject(wrappedValue: SessionsViewModel(host: host, token: token, activityStore: activityStore))
+    }
+
+    init(
+        host: SavedHost,
+        token: String,
+        onConnected: @escaping () -> Void,
+        activityStore: ActivityLogStore,
+        viewModel: SessionsViewModel,
+        autoStart: Bool
+    ) {
+        self.host = host
+        self.token = token
+        self.onConnected = onConnected
+        self.activityStore = activityStore
+        self.autoStart = autoStart
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     var body: some View {
@@ -41,10 +59,12 @@ struct SessionsView: View {
             }
         }
         .task {
+            guard autoStart else { return }
             onConnected()
             viewModel.start()
         }
         .refreshable {
+            guard autoStart else { return }
             await viewModel.refresh()
         }
         .sheet(isPresented: $isCreateGroupPresented) {
@@ -394,6 +414,28 @@ struct SessionsView: View {
                 startRadius: 40,
                 endRadius: 440
             )
+        )
+    }
+}
+
+#Preview("Explorer Sessions") {
+    let context = PreviewAppContext.make()
+    let previewViewModel = SessionsViewModel(
+        previewHost: PreviewFixtures.hostA,
+        token: "preview-token-alpha",
+        activityStore: context.activityStore,
+        hostInfo: PreviewFixtures.hostInfoA,
+        sessions: [PreviewFixtures.sessionA, PreviewFixtures.sessionB]
+    )
+
+    NavigationStack {
+        SessionsView(
+            host: PreviewFixtures.hostA,
+            token: "preview-token-alpha",
+            onConnected: {},
+            activityStore: context.activityStore,
+            viewModel: previewViewModel,
+            autoStart: false
         )
     }
 }

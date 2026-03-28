@@ -7,6 +7,8 @@ struct PairingView: View {
     let autoStartDiscovery: Bool
 
     @StateObject private var connectViewModel = ConnectViewModel()
+    @State private var isManualAddPresented = false
+    @State private var isHostDetailPresented = false
 
     init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore, autoStartDiscovery: Bool = true) {
         self.hostsStore = hostsStore
@@ -23,9 +25,7 @@ struct PairingView: View {
                 VStack(spacing: 18) {
                     headerCard
                     discoveryCard
-                    manualAddCard
                     savedDevicesCard
-                    selectedHostCard
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)
@@ -41,41 +41,73 @@ struct PairingView: View {
             guard autoStartDiscovery else { return }
             hostsStore.stopDiscovery()
         }
+        .sheet(isPresented: $isManualAddPresented) {
+            NavigationStack {
+                ScrollView {
+                    manualAddCard
+                        .padding(16)
+                }
+                .background(background)
+                .navigationTitle("Manual Add Device")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") {
+                            isManualAddPresented = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $isHostDetailPresented) {
+            NavigationStack {
+                ScrollView {
+                    selectedHostCard
+                        .padding(16)
+                }
+                .background(background)
+                .navigationTitle("Device Details")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") {
+                            isHostDetailPresented = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private var background: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.05, green: 0.06, blue: 0.08),
-                Color(red: 0.12, green: 0.10, blue: 0.09),
-                Color(red: 0.20, green: 0.14, blue: 0.11)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        Color(red: 0.04, green: 0.05, blue: 0.06)
         .ignoresSafeArea()
-        .overlay(alignment: .topTrailing) {
-            Circle()
-                .fill(Color(red: 0.89, green: 0.68, blue: 0.43).opacity(0.10))
-                .frame(width: 220, height: 220)
-                .blur(radius: 24)
-                .offset(x: 70, y: -40)
-        }
     }
 
     private var headerCard: some View {
         card {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Native discovery and host trust")
-                    .font(.system(size: 30, weight: .semibold, design: .serif))
-                    .foregroundStyle(.white)
-                Text("Broadcast listeners surface nearby hosts live. Manual verify remains available when broadcast is unavailable.")
-                    .font(.body)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Discover nearby devices or add one manually when broadcast is unavailable.")
+                    .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.72))
                 if let discoveryStatus = hostsStore.discoveryStatus {
                     Text(discoveryStatus)
                         .font(.footnote)
-                        .foregroundStyle(Color(red: 0.93, green: 0.82, blue: 0.64))
+                        .foregroundStyle(inventoryAccent)
+                }
+                HStack {
+                    Spacer()
+                    Button {
+                        isManualAddPresented = true
+                    } label: {
+                        Label("Manual Add Device", systemImage: "plus")
+                            .font(.footnote.weight(.bold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(inventoryAccent)
                 }
             }
         }
@@ -90,15 +122,7 @@ struct PairingView: View {
                         .foregroundStyle(Color.white.opacity(0.62))
                 } else {
                     ForEach(hostsStore.discoveredHosts) { host in
-                        Button {
-                            hostsStore.selectDiscoveredHost(host)
-                            activityStore.record(
-                                category: .system,
-                                title: "Discovered host selected",
-                                message: "Inspecting \(host.displayName) from live discovery.",
-                                hostLabel: host.displayName
-                            )
-                        } label: {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(host.displayName)
@@ -119,10 +143,35 @@ struct PairingView: View {
                                         .foregroundStyle(Color.white.opacity(0.52))
                                 }
                             }
-                            .padding(14)
-                            .background(cardRowBackground)
+
+                            HStack(spacing: 10) {
+                                Button("Inspect") {
+                                    hostsStore.selectDiscoveredHost(host)
+                                    activityStore.record(
+                                        category: .system,
+                                        title: "Discovered host selected",
+                                        message: "Inspecting \(host.displayName) from live discovery.",
+                                        hostLabel: host.displayName
+                                    )
+                                    isHostDetailPresented = true
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(Color.white.opacity(0.78))
+
+                                if hostsStore.hostState(for: host) == "Paired" {
+                                    statusChip("Paired")
+                                } else {
+                                    Button("Pair") {
+                                        hostsStore.selectDiscoveredHost(host)
+                                        isHostDetailPresented = true
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(inventoryAccent)
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(14)
+                        .background(cardRowBackground)
                     }
                 }
             }
@@ -229,17 +278,8 @@ struct PairingView: View {
                         .foregroundStyle(Color.white.opacity(0.62))
                 } else {
                     ForEach(Array(hostsStore.savedHosts.enumerated()), id: \.element.id) { index, host in
-                        HStack(alignment: .top, spacing: 12) {
-                            Button {
-                                connectViewModel.populate(from: host)
-                                hostsStore.selectSavedHost(host)
-                                activityStore.record(
-                                    category: .system,
-                                    title: "Saved host selected",
-                                    message: "Loaded the saved host into the pairing detail view.",
-                                    hostLabel: host.displayLabel
-                                )
-                            } label: {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(host.displayLabel)
                                         .font(.headline)
@@ -251,16 +291,45 @@ struct PairingView: View {
                                 Spacer()
                                 statusChip(hostsStore.token(for: host) == nil ? "Saved" : "Paired")
                             }
-                            .buttonStyle(.plain)
 
-                            Button(role: .destructive) {
-                                hostsStore.removeSavedHosts(at: IndexSet(integer: index))
-                            } label: {
-                                Image(systemName: "trash")
-                                    .foregroundStyle(Color.white.opacity(0.68))
-                                    .padding(10)
+                            HStack(spacing: 10) {
+                                Button("Inspect") {
+                                    connectViewModel.populate(from: host)
+                                    hostsStore.selectSavedHost(host)
+                                    activityStore.record(
+                                        category: .system,
+                                        title: "Saved host selected",
+                                        message: "Loaded the saved host into the pairing detail view.",
+                                        hostLabel: host.displayLabel
+                                    )
+                                    isHostDetailPresented = true
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(Color.white.opacity(0.78))
+
+                                if hostsStore.token(for: host) == nil {
+                                    Button("Pair") {
+                                        connectViewModel.populate(from: host)
+                                        hostsStore.selectSavedHost(host)
+                                        isHostDetailPresented = true
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(inventoryAccent)
+                                } else {
+                                    statusChip("Paired")
+                                }
+
+                                Spacer()
+
+                                Button(role: .destructive) {
+                                    hostsStore.removeSavedHosts(at: IndexSet(integer: index))
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(Color.white.opacity(0.68))
+                                        .padding(10)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                         .padding(14)
                         .background(cardRowBackground)
@@ -372,8 +441,8 @@ struct PairingView: View {
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color(red: 0.84, green: 0.63, blue: 0.39).opacity(0.18))
-            .foregroundStyle(Color(red: 0.96, green: 0.84, blue: 0.67))
+            .background(inventoryAccent.opacity(0.18))
+            .foregroundStyle(inventoryAccent)
             .clipShape(Capsule())
     }
 
@@ -394,6 +463,10 @@ struct PairingView: View {
     private var cardRowBackground: some View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(Color.white.opacity(0.06))
+    }
+
+    private var inventoryAccent: Color {
+        Color(red: 0.74, green: 0.81, blue: 0.54)
     }
 }
 
@@ -421,61 +494,85 @@ private struct PairingRequestSection: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            switch viewModel.phase {
-            case .idle:
-                Button("Start Pairing") {
-                    Task { await viewModel.start() }
-                }
-                .buttonStyle(ActionButtonStyle(fill: Color(red: 0.84, green: 0.63, blue: 0.39)))
-            case .requesting:
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Requesting pairing code from the host.")
-                        .foregroundStyle(Color.white.opacity(0.72))
-                }
-            case let .waiting(response):
-                VStack(alignment: .leading, spacing: 10) {
-                    pairingValue("Pairing ID", value: response.pairingId)
-                    pairingValue("Code", value: response.code)
-                    pairingValue("Status", value: response.status)
-                    Text("Approve this request in the host admin UI. Claim polling continues automatically.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.white.opacity(0.62))
-                    Button("Retry Claim Polling") {
-                        viewModel.retryPolling()
-                    }
-                    .buttonStyle(ActionButtonStyle(fill: Color.white.opacity(0.10)))
-                }
-            case let .approved(deviceName):
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Pairing approved.")
-                        .foregroundStyle(Color(red: 0.75, green: 0.91, blue: 0.77))
-                    if let deviceName {
-                        Text("Trusted as \(deviceName).")
-                            .foregroundStyle(Color.white.opacity(0.72))
-                    }
-                }
-            case .rejected:
-                retryState(message: "The host rejected this pairing request.")
-            case .expired:
-                retryState(message: "The pairing request expired before approval.")
-            case let .failed(message):
-                retryState(message: message)
-            }
+            phaseContent
         }
-        .onChange(of: isApproved) {
-            if isApproved, tokenStore.token(for: host.tokenKey) != nil {
-                onPaired()
-            }
+        .task(id: approvalKey) {
+            notifyPairedIfNeeded()
         }
         .id(host.tokenKey + "|" + host.detailLabel + "|" + (alias ?? ""))
     }
 
-    private var isApproved: Bool {
-        if case .approved = viewModel.phase {
-            return true
+    @ViewBuilder
+    private var phaseContent: some View {
+        switch viewModel.phase {
+        case .idle:
+            startButton
+        case .requesting:
+            requestingContent
+        case let .waiting(response):
+            waitingContent(response)
+        case let .approved(deviceName):
+            approvedContent(deviceName)
+        case .rejected:
+            retryState(message: "The host rejected this pairing request.")
+        case .expired:
+            retryState(message: "The pairing request expired before approval.")
+        case let .failed(message):
+            retryState(message: message)
         }
-        return false
+    }
+
+    private var approvalKey: String {
+        if case .approved = viewModel.phase, tokenStore.token(for: host.tokenKey) != nil {
+            return host.tokenKey
+        }
+        return ""
+    }
+
+    private func notifyPairedIfNeeded() {
+        guard !approvalKey.isEmpty else { return }
+        onPaired()
+    }
+
+    private var startButton: some View {
+        Button("Start Pairing") {
+            Task { await viewModel.start() }
+        }
+        .buttonStyle(ActionButtonStyle(fill: Color(red: 0.74, green: 0.81, blue: 0.54)))
+    }
+
+    private var requestingContent: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+            Text("Requesting pairing code from the host.")
+                .foregroundStyle(Color.white.opacity(0.72))
+        }
+    }
+
+    private func waitingContent(_ response: PairingRequestResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            pairingValue("Pairing ID", value: response.pairingId)
+            pairingValue("Code", value: response.code)
+            pairingValue("Status", value: response.status)
+            Text("Approve this request in the host admin UI. Claim polling continues automatically.")
+                .font(.footnote)
+                .foregroundStyle(Color.white.opacity(0.62))
+            Button("Retry Claim Polling") {
+                viewModel.retryPolling()
+            }
+            .buttonStyle(ActionButtonStyle(fill: Color.white.opacity(0.10)))
+        }
+    }
+
+    private func approvedContent(_ deviceName: String?) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pairing approved.")
+                .foregroundStyle(Color(red: 0.75, green: 0.91, blue: 0.77))
+            if let deviceName {
+                Text("Trusted as \(deviceName).")
+                    .foregroundStyle(Color.white.opacity(0.72))
+            }
+        }
     }
 
     private func retryState(message: String) -> some View {
