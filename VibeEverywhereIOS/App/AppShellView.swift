@@ -278,7 +278,10 @@ private struct ExplorerWorkspaceView: View {
         )) {
             if let viewModel = focusedBinding.wrappedValue {
                 NavigationStack {
-                    SessionDetailView(viewModel: viewModel)
+                    SessionDetailView(viewModel: viewModel) {
+                        explorerStore.disconnect(viewModel)
+                        focusedBinding.wrappedValue = nil
+                    }
                 }
             }
         }

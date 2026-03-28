@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let vibeSessionStateDidChange = Notification.Name("vibeSessionStateDidChange")
+}
+
 @MainActor
 final class SessionViewModel: ObservableObject {
     @Published var session: SessionSummary
@@ -163,6 +167,7 @@ final class SessionViewModel: ObservableObject {
 
     func updateSession(_ summary: SessionSummary) {
         session = summary
+        publishSessionStateChanged()
     }
 
     func updateGroupTags(_ tags: [String]) {
@@ -201,6 +206,7 @@ final class SessionViewModel: ObservableObject {
             gitStagedCount: session.gitStagedCount,
             gitUntrackedCount: session.gitUntrackedCount
         )
+        publishSessionStateChanged()
     }
 
     func stopSession() async {
@@ -215,6 +221,7 @@ final class SessionViewModel: ObservableObject {
                 sessionID: session.sessionId
             )
             await loadSnapshot(force: true)
+            publishSessionStateChanged()
         } catch {
             lastError = error.localizedDescription
             activityStore.record(
@@ -286,6 +293,7 @@ final class SessionViewModel: ObservableObject {
                     sessionID: metadata.sessionId
                 )
             }
+            publishSessionStateChanged()
         case let .terminalOutput(output):
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
@@ -333,6 +341,7 @@ final class SessionViewModel: ObservableObject {
                 hostLabel: host.displayLabel,
                 sessionID: payload.sessionId
             )
+            publishSessionStateChanged()
         case let .error(payload):
             lastError = "\(payload.code): \(payload.message)"
             activityStore.record(
@@ -415,5 +424,16 @@ final class SessionViewModel: ObservableObject {
                 sessionID: session.sessionId
             )
         }
+    }
+
+    private func publishSessionStateChanged() {
+        NotificationCenter.default.post(
+            name: .vibeSessionStateDidChange,
+            object: nil,
+            userInfo: [
+                "hostID": host.id.uuidString,
+                "sessionID": session.sessionId
+            ]
+        )
     }
 }

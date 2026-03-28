@@ -3,11 +3,14 @@ import SwiftUI
 struct SessionDetailView: View {
     @ObservedObject var viewModel: SessionViewModel
     let autoActivate: Bool
+    let onSessionEnded: (() -> Void)?
     @State private var isContextPanelPresented = false
+    @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: SessionViewModel, autoActivate: Bool = true) {
+    init(viewModel: SessionViewModel, autoActivate: Bool = true, onSessionEnded: (() -> Void)? = nil) {
         self.viewModel = viewModel
         self.autoActivate = autoActivate
+        self.onSessionEnded = onSessionEnded
     }
 
     var body: some View {
@@ -56,6 +59,11 @@ struct SessionDetailView: View {
         .task {
             guard autoActivate else { return }
             await viewModel.activate()
+        }
+        .onChange(of: viewModel.session.isEnded) { _, isEnded in
+            guard isEnded else { return }
+            onSessionEnded?()
+            dismiss()
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
     }

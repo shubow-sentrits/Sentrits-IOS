@@ -75,6 +75,10 @@ struct InventoryView: View {
                     guard autoRefreshOnAppear else { return }
                     Task { await store.refresh() }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .vibeSessionStateDidChange)) { _ in
+                    guard autoRefreshOnAppear else { return }
+                    Task { await store.refresh() }
+                }
         )
 
         let withSheets = AnyView(
@@ -328,8 +332,8 @@ struct InventoryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(isConnected ? .gray.opacity(0.7) : inventoryAccent)
-                .disabled(section.token == nil)
+                .tint(session.isEnded ? .gray.opacity(0.55) : (isConnected ? .gray.opacity(0.7) : inventoryAccent))
+                .disabled(section.token == nil || session.isEnded)
 
                 Button(role: .destructive) {
                     Task {
