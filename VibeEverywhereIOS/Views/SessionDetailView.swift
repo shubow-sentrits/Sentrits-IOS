@@ -5,6 +5,7 @@ struct SessionDetailView: View {
     let autoActivate: Bool
     let onSessionEnded: (() -> Void)?
     @State private var isContextPanelPresented = false
+    @State private var keyPageIndex = 0
     @Environment(\.dismiss) private var dismiss
 
     init(viewModel: SessionViewModel, autoActivate: Bool = true, onSessionEnded: (() -> Void)? = nil) {
@@ -218,19 +219,18 @@ struct SessionDetailView: View {
 
     private var inputBar: some View {
         VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
                 directionalKeyCluster
                     .frame(width: 118, height: 76)
 
-                Divider()
-                    .frame(width: 1, height: 74)
-                    .background(Color.white.opacity(0.08))
+                pageIndicator
+                    .frame(width: 12, height: 76)
 
-                otherKeyGrid
-                    .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 76, alignment: .topLeading)
+                verticalKeyPager
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 76)
             }
             .padding(.top, -10)
-            .frame(height: 76)
 
             HStack(spacing: 10) {
                 TextField(
@@ -266,6 +266,37 @@ struct SessionDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
+    private var pageIndicator: some View {
+        VStack(spacing: 6) {
+            ForEach(0..<2, id: \.self) { index in
+                Capsule()
+                    .fill(index == keyPageIndex ? Color.focusedAccent : Color.white.opacity(0.14))
+                    .frame(width: 6, height: index == keyPageIndex ? 18 : 8)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var verticalKeyPager: some View {
+        GeometryReader { proxy in
+            TabView(selection: $keyPageIndex) {
+                expandedKeyGrid
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .rotationEffect(.degrees(90))
+                    .tag(0)
+                
+                primaryKeyGrid
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .rotationEffect(.degrees(90))
+                    .tag(1)
+            }
+            .frame(width: proxy.size.height, height: proxy.size.width)
+            .rotationEffect(.degrees(-90), anchor: .topLeading)
+            .offset(x: 0, y: proxy.size.height)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+    }
+
     private var directionalKeyCluster: some View {
         let columns = Array(repeating: GridItem(.fixed(34), spacing: 10), count: 3)
         return LazyVGrid(columns: columns, spacing: 12) {
@@ -285,26 +316,53 @@ struct SessionDetailView: View {
         }
     }
 
-    private var otherKeyGrid: some View {
+    private var primaryKeyGrid: some View {
         let rows = Array(repeating: GridItem(.fixed(34), spacing: 0), count: 2)
         return ScrollView(.horizontal, showsIndicators: false) {
             LazyHGrid(rows: rows, spacing: 8) {
-                ForEach(otherControlKeys, id: \.label) { key in
-                    Button {
-                        Task { await viewModel.sendTerminalInput(key.payload) }
-                    } label: {
-                        Text(key.label)
-                            .font(.caption.weight(.semibold))
-                            .frame(width: 40, height: 15)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(Color.focusedControlKey)
-                    .frame(height: 24)
-                    .disabled(!viewModel.canSendInput)
-                }
+                keyButtons(for: primaryControlKeys)
             }
             .padding(.vertical, 4)
         }
+    }
+
+    private var expandedKeyGrid: some View {
+        let rows = Array(repeating: GridItem(.fixed(34), spacing: 0), count: 2)
+        return ScrollView(.horizontal, showsIndicators: false) {
+            LazyHGrid(rows: rows, spacing: 8) {
+                keyButtons(for: expandedControlKeys)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func keyButtons(for keys: [TerminalControlKey]) -> some View {
+        ForEach(keys, id: \.label) { key in
+            Button {
+                handleControlKeyTap(key)
+            } label: {
+                Text(key.label)
+                    .font(.caption.weight(.semibold))
+                    .frame(minWidth: 44)
+                    .frame(height: 15)
+            }
+            .buttonStyle(.bordered)
+            .tint(Color.focusedControlKey)
+            .frame(height: 24)
+            .disabled(!viewModel.canSendInput && key.payload != "__MORE__")
+        }
+    }
+
+    private func handleControlKeyTap(_ key: TerminalControlKey) {
+        if key.payload == "__MORE__" {
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                keyPageIndex = 1
+            }
+            return
+        }
+
+        Task { await viewModel.sendTerminalInput(key.payload) }
     }
 
     private var contextPanel: some View {
@@ -470,13 +528,38 @@ struct SessionDetailView: View {
         ]
     }
 
-    private var otherControlKeys: [TerminalControlKey] {
+    private var primaryControlKeys: [TerminalControlKey] {
         [
+            .init(label: "Ctrl+C", payload: "\u{03}", systemImage: ""),
+            .init(label: "Esc", payload: "\u{1B}", systemImage: ""),
+            .init(label: "Tab", payload: "\t", systemImage: ""),
             .init(label: "Home", payload: "\u{1B}[H", systemImage: ""),
             .init(label: "End", payload: "\u{1B}[F", systemImage: ""),
-            .init(label: "Tab", payload: "\t", systemImage: ""),
-            .init(label: "Esc", payload: "\u{1B}", systemImage: ""),
             .init(label: "Del", payload: "\u{7F}", systemImage: "")
+            ,
+            .init(label: "PgUp", payload: "\u{1B}[5~", systemImage: ""),
+            .init(label: "PgDn", payload: "\u{1B}[6~", systemImage: ""),
+            .init(label: "More", payload: "__MORE__", systemImage: "")
+        ]
+    }
+
+    private var expandedControlKeys: [TerminalControlKey] {
+        [
+            .init(label: "Ctrl+D", payload: "\u{04}", systemImage: ""),
+            .init(label: "Ctrl+L", payload: "\u{0C}", systemImage: ""),
+            .init(label: "Ctrl+Z", payload: "\u{1A}", systemImage: ""),
+            .init(label: "F1", payload: "\u{1B}OP", systemImage: ""),
+            .init(label: "F2", payload: "\u{1B}OQ", systemImage: ""),
+            .init(label: "F3", payload: "\u{1B}OR", systemImage: ""),
+            .init(label: "F4", payload: "\u{1B}OS", systemImage: ""),
+            .init(label: "F5", payload: "\u{1B}[15~", systemImage: ""),
+            .init(label: "F6", payload: "\u{1B}[17~", systemImage: ""),
+            .init(label: "F7", payload: "\u{1B}[18~", systemImage: ""),
+            .init(label: "F8", payload: "\u{1B}[19~", systemImage: ""),
+            .init(label: "F9", payload: "\u{1B}[20~", systemImage: ""),
+            .init(label: "F10", payload: "\u{1B}[21~", systemImage: ""),
+            .init(label: "F11", payload: "\u{1B}[23~", systemImage: ""),
+            .init(label: "F12", payload: "\u{1B}[24~", systemImage: "")
         ]
     }
 }
