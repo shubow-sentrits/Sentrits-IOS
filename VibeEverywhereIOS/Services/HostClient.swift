@@ -138,6 +138,10 @@ actor HostClient {
         _ = try await requestText(path: "/sessions/\(sessionId)/stop", endpoint: host.endpoint, token: token, method: "POST")
     }
 
+    func clearInactiveSessions(host: SavedHost, token: String) async throws {
+        _ = try await requestText(path: "/sessions/clear-inactive", endpoint: host.endpoint, token: token, method: "POST")
+    }
+
     func validateToken(_ token: String, for host: SavedHost) async throws {
         _ = try await listSessions(for: host, token: token)
     }

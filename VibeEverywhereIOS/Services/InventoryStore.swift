@@ -165,6 +165,22 @@ final class InventoryStore: ObservableObject {
         await refresh()
     }
 
+    func clearStoppedSessions(hostID: UUID) async throws {
+        guard let section = sections.first(where: { $0.host.id == hostID }) else {
+            throw InventoryStoreError.hostUnavailable
+        }
+        guard let token = section.token else {
+            throw InventoryStoreError.missingToken
+        }
+
+        busyHostIDs.insert(hostID)
+        defer { busyHostIDs.remove(hostID) }
+
+        let client = HostClient(host: section.host)
+        try await client.clearInactiveSessions(host: section.host, token: token)
+        await refresh()
+    }
+
     func isBusy(hostID: UUID) -> Bool {
         busyHostIDs.contains(hostID)
     }

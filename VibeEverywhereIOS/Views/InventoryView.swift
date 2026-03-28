@@ -10,6 +10,7 @@ struct InventoryView: View {
     @StateObject private var store: InventoryStore
     @State private var createSheetHost: SavedHost?
     @State private var inventoryError: String?
+    @State private var clearStoppedHost: SavedHost?
     private let autoRefreshOnAppear: Bool
 
     init(
@@ -96,6 +97,30 @@ struct InventoryView: View {
 
         return AnyView(
             withSheets
+                .alert("Remove stopped sessions?", isPresented: Binding(
+                    get: { clearStoppedHost != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            clearStoppedHost = nil
+                        }
+                    }
+                ), presenting: clearStoppedHost) { host in
+                    Button("Cancel", role: .cancel) {
+                        clearStoppedHost = nil
+                    }
+                    Button("Remove", role: .destructive) {
+                        Task {
+                            do {
+                                try await store.clearStoppedSessions(hostID: host.id)
+                            } catch {
+                                inventoryError = error.localizedDescription
+                            }
+                            clearStoppedHost = nil
+                        }
+                    }
+                } message: { host in
+                    Text("Remove all stopped sessions for \(hostTitle(host))?")
+                }
                 .alert("Inventory Error", isPresented: Binding(
                     get: { inventoryError != nil },
                     set: { isPresented in
@@ -208,13 +233,26 @@ struct InventoryView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 8) {
-                    Text("\(visibleSessions.count) visible")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.white.opacity(0.6))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(Capsule())
+                    HStack(spacing: 8) {
+                        Text("\(visibleSessions.count) visible")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Capsule())
+
+                        Button {
+                            clearStoppedHost = section.host
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 30, height: 12)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red.opacity(0.82))
+                        .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
+                    }
 
                     Button {
                         createSheetHost = section.host
@@ -226,6 +264,7 @@ struct InventoryView: View {
                     .tint(inventoryAccent)
                     .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
                 }
+                .padding(.vertical, -10)
             }
 
             if let errorMessage = section.errorMessage {
@@ -278,7 +317,7 @@ struct InventoryView: View {
                         statusBadge(attention, color: attentionColor(for: session))
                     }
                 }
-            }
+            }.padding(.vertical, -4)
 
             HStack(spacing: 8) {
                 detailChip(session.provider.uppercased(), tint: inventoryAccent)
@@ -286,7 +325,7 @@ struct InventoryView: View {
                 if let attached = session.attachedClientCount, attached > 0 {
                     detailChip("\(attached) attached", tint: .blue.opacity(0.85))
                 }
-            }
+            }.padding(.vertical, -4)
 
             HStack(spacing: 8) {
                 if let branch = session.gitBranch, !branch.isEmpty {
@@ -297,7 +336,7 @@ struct InventoryView: View {
                 } else {
                     detailChip("files steady", tint: .white.opacity(0.45))
                 }
-            }
+            }.padding(.vertical, -4)
 
             if !session.groupTags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -312,7 +351,7 @@ struct InventoryView: View {
                                 .clipShape(Capsule())
                         }
                     }
-                }
+                }.padding(.vertical, -4)
             }
 
             HStack(spacing: 10) {
@@ -358,7 +397,7 @@ struct InventoryView: View {
                 .buttonStyle(.bordered)
                 .tint(.red.opacity(0.9))
                 .disabled(section.token == nil || store.isBusy(sessionID: session.sessionId))
-            }
+            }.padding(.bottom, -6)
         }
         .padding(16)
         .background(Color.white.opacity(0.05))
