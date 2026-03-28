@@ -14,44 +14,47 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .trailing) {
-                focusedBackground
+        ZStack(alignment: .trailing) {
+            focusedBackground
+                .ignoresSafeArea()
+
+            VStack(spacing: layout.verticalSpacing) {
+                headerBar
+                    .frame(height: layout.headerHeight, alignment: .top)
+                    .padding(.horizontal, layout.outerPadding)
+                    .padding(.top, layout.topPadding)
+
+                terminalPanel
+                    .layoutPriority(1)
+                    .padding(.horizontal, layout.terminalHorizontalPadding)
+
+                modeBar
+                    .frame(height: layout.modeBarHeight)
+                    .padding(.horizontal, layout.outerPadding)
+
+                inputBar
+                    .frame(height: layout.inputBarHeight)
+                    .padding(.horizontal, layout.outerPadding)
+                    .padding(.bottom, layout.bottomPadding)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            if isContextPanelPresented {
+                Color.black.opacity(0.24)
                     .ignoresSafeArea()
-
-                VStack(spacing: 12) {
-                    headerBar
-                        .padding(.horizontal, 14)
-                        .padding(.top, 10)
-
-                    terminalPanel(height: max(geometry.size.height * 0.68, 360))
-                        .padding(.horizontal, 2)
-
-                    modeBar
-                        .padding(.horizontal, 14)
-
-                    inputBar
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
-                }
-
-                if isContextPanelPresented {
-                    Color.black.opacity(0.24)
-                        .ignoresSafeArea()
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                                isContextPanelPresented = false
-                            }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                            isContextPanelPresented = false
                         }
-                        .zIndex(1)
+                    }
+                    .zIndex(1)
 
-                    contextPanel
-                        .frame(width: min(geometry.size.width * 0.78, 320))
-                        .padding(.trailing, 10)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                        .zIndex(2)
-                }
+                contextPanel
+                    .frame(width: 320)
+                    .padding(.trailing, 10)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .zIndex(2)
             }
         }
         .navigationTitle(viewModel.session.displayTitle)
@@ -68,6 +71,8 @@ struct SessionDetailView: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
         .toolbarTitleDisplayMode(.inline)
     }
+
+    private let layout = FocusedLayoutMetrics()
 
     private var focusedBackground: some View {
         LinearGradient(
@@ -86,13 +91,13 @@ struct SessionDetailView: View {
     }
 
     private var headerBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 compactStatusBadge(viewModel.session.status, tone: sessionStatusColor(viewModel.session.status))
                 compactStatusBadge(socketLabel(viewModel.socketState), tone: socketColor(viewModel.socketState))
                 compactStatusBadge(viewModel.session.controllerKind.capitalized, tone: viewModel.canSendInput ? .green : .orange)
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 Button {
                     withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
@@ -102,22 +107,24 @@ struct SessionDetailView: View {
                     Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.focusedText)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 32, height: 32)
                         .background(Color.focusedPanelSoft.opacity(0.9))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
+            .frame(height: 32)
 
             Text(viewModel.session.workspaceRoot)
                 .font(.caption)
                 .foregroundStyle(Color.focusedMuted)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .frame(height: 16, alignment: .leading)
         }
     }
 
-    private func terminalPanel(height: CGFloat) -> some View {
+    private var terminalPanel: some View {
         ZStack {
             TerminalTextView(
                 terminal: viewModel.terminal,
@@ -142,8 +149,7 @@ struct SessionDetailView: View {
                     .clipShape(Capsule())
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -152,56 +158,43 @@ struct SessionDetailView: View {
     }
 
     private var modeBar: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 12) {
+            modeIndicator(
+                title: viewModel.canSendInput ? "You have control" : "Observer Mode",
+                detail: viewModel.canSendInput ? "Direct terminal input is live" : "You are watching this session",
+                tone: viewModel.canSendInput ? Color(red: 0.82, green: 0.9, blue: 0.74) : Color.focusedMuted
+            )
+
+            Spacer(minLength: 8)
+
             if viewModel.canSendInput {
-                HStack(spacing: 12) {
-                    modeIndicator(
-                        title: "You have control",
-                        detail: "Direct terminal input is live",
-                        tone: Color(red: 0.82, green: 0.9, blue: 0.74)
-                    )
-
-                    Spacer()
-
-                    Button("Release Control") {
-                        Task { await viewModel.releaseControl() }
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(Color.focusedAccent)
-
-                    Button(role: .destructive) {
-                        Task { await viewModel.stopSession() }
-                    } label: {
-                        Label("Stop", systemImage: "stop.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.red.opacity(0.9))
+                Button("Release Control") {
+                    Task { await viewModel.releaseControl() }
                 }
+                .buttonStyle(.bordered)
+                .tint(Color.focusedAccent)
+                .frame(height: 34)
+
+                Button(role: .destructive) {
+                    Task { await viewModel.stopSession() }
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.red.opacity(0.9))
+                .frame(height: 34)
             } else {
-                HStack(spacing: 12) {
-                    modeIndicator(
-                        title: "Observer Mode",
-                        detail: "You are watching this session",
-                        tone: Color.focusedMuted
-                    )
-
-                    Spacer()
-
-                    Button("Request Control") {
-                        Task { await viewModel.requestControl() }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.focusedAccent)
+                Button("Request Control") {
+                    Task { await viewModel.requestControl() }
                 }
-            }
-
-            if let lastError = viewModel.lastError {
-                Text(lastError)
-                    .font(.footnote)
-                    .foregroundStyle(Color.red.opacity(0.92))
+                .buttonStyle(.borderedProminent)
+                .tint(Color.focusedAccent)
+                .frame(height: 34)
             }
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(Color.focusedGlass)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -211,7 +204,7 @@ struct SessionDetailView: View {
     }
 
     private var inputBar: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(controlKeys, id: \.label) { key in
@@ -220,21 +213,23 @@ struct SessionDetailView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(Color.focusedControlKey)
+                        .frame(height: 32)
                         .disabled(!viewModel.canSendInput)
                     }
                 }
+                .padding(.vertical, 1)
             }
+            .frame(height: 34)
 
             HStack(spacing: 10) {
                 TextField(
                     viewModel.canSendInput ? "Enter terminal command" : "Request control to send commands",
-                    text: $viewModel.inputText,
-                    axis: .vertical
+                    text: $viewModel.inputText
                 )
                 .textFieldStyle(.plain)
-                .lineLimit(1 ... 4)
+                .lineLimit(1)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .frame(height: 46)
                 .background(Color.focusedPanelSoft.opacity(0.92))
                 .foregroundStyle(viewModel.canSendInput ? Color.focusedText : Color.focusedMuted)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -245,10 +240,13 @@ struct SessionDetailView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.focusedAccent)
+                .frame(height: 46)
                 .disabled(!viewModel.canSendInput || viewModel.inputText.isEmpty)
             }
+            .frame(height: 46)
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(Color.focusedGlass)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -334,15 +332,18 @@ struct SessionDetailView: View {
     }
 
     private func modeIndicator(title: String, detail: String, tone: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(tone.opacity(0.95))
+                .lineLimit(1)
 
             Text(detail)
-                .font(.footnote)
+                .font(.caption2)
                 .foregroundStyle(Color.focusedMuted)
+                .lineLimit(1)
         }
+        .frame(maxHeight: .infinity, alignment: .center)
     }
 
     private func contextSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -399,8 +400,9 @@ struct SessionDetailView: View {
         Text(text)
             .font(.caption.weight(.semibold))
             .foregroundStyle(tone)
+            .lineLimit(1)
             .padding(.horizontal, 9)
-            .padding(.vertical, 5)
+            .frame(height: 28)
             .background(tone.opacity(0.18))
             .clipShape(Capsule())
     }
@@ -420,6 +422,17 @@ struct SessionDetailView: View {
             .init(label: "Del", payload: "\u{7F}")
         ]
     }
+}
+
+private struct FocusedLayoutMetrics {
+    let outerPadding: CGFloat = 14
+    let terminalHorizontalPadding: CGFloat = 2
+    let topPadding: CGFloat = 10
+    let bottomPadding: CGFloat = 10
+    let verticalSpacing: CGFloat = 10
+    let headerHeight: CGFloat = 58
+    let modeBarHeight: CGFloat = 76
+    let inputBarHeight: CGFloat = 114
 }
 
 private struct TerminalControlKey {
