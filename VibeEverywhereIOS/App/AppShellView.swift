@@ -89,6 +89,12 @@ struct AppShellView: View {
         .onChange(of: hostsStore.savedHosts) {
             Task { await explorerStore.syncConnectedHosts() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .vibeSessionStateDidChange)) { _ in
+            explorerStore.pruneEndedSessions()
+            if focusedSessionViewModel?.session.isEnded == true {
+                clearFocusedSession()
+            }
+        }
     }
 
     private var focusedSessionViewModel: SessionViewModel? {
@@ -237,6 +243,13 @@ final class ExplorerWorkspaceStore: ObservableObject {
 
         sessions = next
         sortSessions()
+        if !groupTabs.contains(selectedGroupTag) {
+            selectedGroupTag = "all"
+        }
+    }
+
+    func pruneEndedSessions() {
+        sessions.removeAll { $0.session.isEnded }
         if !groupTabs.contains(selectedGroupTag) {
             selectedGroupTag = "all"
         }

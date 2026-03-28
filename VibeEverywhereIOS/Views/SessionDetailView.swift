@@ -31,6 +31,7 @@ struct SessionDetailView: View {
                 modeBar
                     .frame(height: layout.modeBarHeight)
                     .padding(.horizontal, layout.outerPadding)
+                    .padding(.bottom, layout.bottomPadding)
 
                 inputBar
                     .frame(height: layout.inputBarHeight)
@@ -57,7 +58,6 @@ struct SessionDetailView: View {
                     .zIndex(2)
             }
         }
-        .padding(.top, -10)
         .navigationTitle(viewModel.session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -71,6 +71,16 @@ struct SessionDetailView: View {
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
         .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    onSessionEnded?()
+                    dismiss()
+                } label: {
+                    Label("Back", systemImage: "chevron.backward")
+                }
+            }
+        }
     }
 
     private let layout = FocusedLayoutMetrics()
@@ -166,12 +176,13 @@ struct SessionDetailView: View {
                 tone: viewModel.canSendInput ? Color(red: 0.82, green: 0.9, blue: 0.74) : Color.focusedMuted
             )
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
 
             if viewModel.canSendInput {
                 Button("Release") {
                     Task { await viewModel.releaseControl() }
                 }
+                .font(.system(size: 12, weight: Font.Weight.bold))
                 .buttonStyle(.bordered)
                 .tint(Color.focusedAccent)
                 .frame(height: 24)
@@ -181,6 +192,7 @@ struct SessionDetailView: View {
                 } label: {
                     Label("Stop", systemImage: "stop.fill")
                 }
+                .font(.system(size: 12, weight: Font.Weight.bold))
                 .buttonStyle(.borderedProminent)
                 .tint(Color.red.opacity(0.9))
                 .frame(height: 24)
@@ -193,9 +205,9 @@ struct SessionDetailView: View {
                 .frame(height: 24)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(height: 60)
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 2)
         .background(Color.focusedGlass)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -205,22 +217,20 @@ struct SessionDetailView: View {
     }
 
     private var inputBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(controlKeys, id: \.label) { key in
-                        Button(key.label) {
-                            Task { await viewModel.sendTerminalInput(key.payload) }
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(Color.focusedControlKey)
-                        .frame(height: 32)
-                        .disabled(!viewModel.canSendInput)
-                    }
-                }
-                .padding(.vertical, 1)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .top, spacing: 12) {
+                directionalKeyCluster
+                    .frame(width: 118, height: 76)
+
+                Divider()
+                    .frame(width: 1, height: 74)
+                    .background(Color.white.opacity(0.08))
+
+                otherKeyGrid
+                    .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 76, alignment: .topLeading)
             }
-            .frame(height: 34)
+            .padding(.top, -10)
+            .frame(height: 76)
 
             HStack(spacing: 10) {
                 TextField(
@@ -254,6 +264,47 @@ struct SessionDetailView: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var directionalKeyCluster: some View {
+        let columns = Array(repeating: GridItem(.fixed(34), spacing: 10), count: 3)
+        return LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(directionalKeys, id: \.label) { key in
+                Button {
+                    Task { await viewModel.sendTerminalInput(key.payload) }
+                } label: {
+                    Image(systemName: key.systemImage)
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(width: 16, height: 15)
+                }
+                .frame(height: 24)
+                .buttonStyle(.bordered)
+                .tint(Color.focusedControlKey)
+                .disabled(!viewModel.canSendInput)
+            }
+        }
+    }
+
+    private var otherKeyGrid: some View {
+        let rows = Array(repeating: GridItem(.fixed(34), spacing: 0), count: 2)
+        return ScrollView(.horizontal, showsIndicators: false) {
+            LazyHGrid(rows: rows, spacing: 8) {
+                ForEach(otherControlKeys, id: \.label) { key in
+                    Button {
+                        Task { await viewModel.sendTerminalInput(key.payload) }
+                    } label: {
+                        Text(key.label)
+                            .font(.caption.weight(.semibold))
+                            .frame(width: 40, height: 15)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.focusedControlKey)
+                    .frame(height: 24)
+                    .disabled(!viewModel.canSendInput)
+                }
+            }
+            .padding(.vertical, 4)
+        }
     }
 
     private var contextPanel: some View {
@@ -408,19 +459,24 @@ struct SessionDetailView: View {
             .clipShape(Capsule())
     }
 
-    private var controlKeys: [TerminalControlKey] {
+    private var directionalKeys: [TerminalControlKey] {
         [
-            .init(label: "Enter", payload: "\r"),
-            .init(label: "Up", payload: "\u{1B}[A"),
-            .init(label: "Down", payload: "\u{1B}[B"),
-            .init(label: "Left", payload: "\u{1B}[D"),
-            .init(label: "Right", payload: "\u{1B}[C"),
-            .init(label: "Home", payload: "\u{1B}[H"),
-            .init(label: "End", payload: "\u{1B}[F"),
-            .init(label: "Tab", payload: "\t"),
-            .init(label: "Esc", payload: "\u{1B}"),
-            .init(label: "Backspace", payload: "\u{08}"),
-            .init(label: "Del", payload: "\u{7F}")
+            .init(label: "Enter", payload: "\r", systemImage: "return.left"),
+            .init(label: "Up", payload: "\u{1B}[A", systemImage: "arrow.up"),
+            .init(label: "Backspace", payload: "\u{08}", systemImage: "delete.left"),
+            .init(label: "Left", payload: "\u{1B}[D", systemImage: "arrow.left"),
+            .init(label: "Down", payload: "\u{1B}[B", systemImage: "arrow.down"),
+            .init(label: "Right", payload: "\u{1B}[C", systemImage: "arrow.right")
+        ]
+    }
+
+    private var otherControlKeys: [TerminalControlKey] {
+        [
+            .init(label: "Home", payload: "\u{1B}[H", systemImage: ""),
+            .init(label: "End", payload: "\u{1B}[F", systemImage: ""),
+            .init(label: "Tab", payload: "\t", systemImage: ""),
+            .init(label: "Esc", payload: "\u{1B}", systemImage: ""),
+            .init(label: "Del", payload: "\u{7F}", systemImage: "")
         ]
     }
 }
@@ -433,12 +489,13 @@ private struct FocusedLayoutMetrics {
     let verticalSpacing: CGFloat = 10
     let headerHeight: CGFloat = 58
     let modeBarHeight: CGFloat = 68
-    let inputBarHeight: CGFloat = 114
+    let inputBarHeight: CGFloat = 126
 }
 
 private struct TerminalControlKey {
     let label: String
     let payload: String
+    let systemImage: String
 }
 
 private extension Color {
