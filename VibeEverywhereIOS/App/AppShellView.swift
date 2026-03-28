@@ -272,16 +272,14 @@ private struct ExplorerWorkspaceView: View {
             createGroupSheet
                 .presentationDetents([.height(240)])
         }
-        .sheet(isPresented: Binding(
+        .navigationDestination(isPresented: Binding(
             get: { focusedBinding.wrappedValue != nil },
             set: { if !$0 { focusedBinding.wrappedValue = nil } }
         )) {
             if let viewModel = focusedBinding.wrappedValue {
-                NavigationStack {
-                    SessionDetailView(viewModel: viewModel) {
-                        explorerStore.disconnect(viewModel)
-                        focusedBinding.wrappedValue = nil
-                    }
+                SessionDetailView(viewModel: viewModel) {
+                    explorerStore.disconnect(viewModel)
+                    focusedBinding.wrappedValue = nil
                 }
             }
         }

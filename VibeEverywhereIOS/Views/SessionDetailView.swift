@@ -66,6 +66,7 @@ struct SessionDetailView: View {
             dismiss()
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
+        .toolbarTitleDisplayMode(.inline)
     }
 
     private var focusedBackground: some View {
