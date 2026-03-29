@@ -43,6 +43,15 @@ enum SessionSocketEvent {
     case error(SessionErrorPayload)
 }
 
+enum SessionControllerSocketEvent {
+    case ready(ControllerReadyPayload)
+    case terminalOutput(Data)
+    case released(ControllerReleasedPayload)
+    case rejected(SessionErrorPayload)
+    case sessionExited(SessionExitedPayload)
+    case error(SessionErrorPayload)
+}
+
 struct TerminalOutputPayload: Codable {
     let sessionId: String
     let seqStart: Int
@@ -54,6 +63,15 @@ struct TerminalOutputPayload: Codable {
 struct SessionExitedPayload: Codable {
     let sessionId: String
     let status: String
+}
+
+struct ControllerReadyPayload: Codable {
+    let sessionId: String
+    let controllerKind: String
+}
+
+struct ControllerReleasedPayload: Codable {
+    let sessionId: String
 }
 
 struct SessionErrorPayload: Codable {

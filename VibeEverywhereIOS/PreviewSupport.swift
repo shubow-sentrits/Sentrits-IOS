@@ -232,6 +232,7 @@ struct PreviewAppContext {
         if focusedSessionViewModel.snapshot == nil {
             focusedSessionViewModel.snapshot = PreviewFixtures.snapshot
             focusedSessionViewModel.socketState = .connected
+            focusedSessionViewModel.controllerState = .connected
             if let tail = PreviewFixtures.snapshot.recentTerminalTail {
                 focusedSessionViewModel.terminal.ingestBase64(tail.data(using: .utf8)!.base64EncodedString(), seqStart: 0, seqEnd: 0)
             }

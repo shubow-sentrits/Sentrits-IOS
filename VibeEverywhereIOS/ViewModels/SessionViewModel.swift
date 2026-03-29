@@ -8,6 +8,7 @@ extension Notification.Name {
 final class SessionViewModel: ObservableObject {
     @Published var session: SessionSummary
     @Published var socketState: SessionSocket.ConnectionState = .idle
+    @Published var controllerState: SessionSocket.ConnectionState = .idle
     @Published var snapshot: SessionSnapshot?
     @Published var lastError: String?
     @Published var inputText = ""
@@ -18,6 +19,7 @@ final class SessionViewModel: ObservableObject {
     let terminal = TerminalEngine()
 
     private let socket: SessionSocket
+    private let controllerSocket: SessionControllerSocket
     private let activityStore: ActivityLogStore
     private var hasLoadedSnapshot = false
 
@@ -27,11 +29,12 @@ final class SessionViewModel: ObservableObject {
         self.session = session
         self.activityStore = activityStore
         self.socket = SessionSocket(host: host)
+        self.controllerSocket = SessionControllerSocket(host: host)
 
         socket.onStateChange = { [weak self] state in
             Task { @MainActor in
                 self?.socketState = state
-                self?.recordSocketState(state)
+                self?.recordSocketState(state, title: "Session")
             }
         }
 
@@ -40,13 +43,27 @@ final class SessionViewModel: ObservableObject {
                 self?.apply(event: event)
             }
         }
+
+        controllerSocket.onStateChange = { [weak self] state in
+            Task { @MainActor in
+                self?.controllerState = state
+                self?.recordSocketState(state, title: "Controller")
+                if case .disconnected = state {
+                    self?.terminal.resetSequenceTracking()
+                }
+            }
+        }
+
+        controllerSocket.onEvent = { [weak self] event in
+            Task { @MainActor in
+                self?.apply(controllerEvent: event)
+            }
+        }
     }
 
-    var hasRemoteControl: Bool {
-        session.controllerKind == "remote" && session.controllerClientId != nil
-    }
+    var hasRemoteControl: Bool { session.controllerKind == "remote" && session.controllerClientId != nil }
 
-    var canSendInput: Bool { hasRemoteControl }
+    var canSendInput: Bool { controllerState == .connected }
 
     var previewText: String {
         let lines = terminal.renderedText
@@ -99,6 +116,7 @@ final class SessionViewModel: ObservableObject {
             hostLabel: host.displayLabel,
             sessionID: session.sessionId
         )
+        controllerSocket.disconnect(reason: "Disconnected by client.")
         socket.disconnect(reason: "Disconnected by client.")
     }
 
@@ -108,6 +126,12 @@ final class SessionViewModel: ObservableObject {
     }
 
     func requestControl() async {
+        if case .connected = controllerState {
+            return
+        }
+        if case .connecting = controllerState {
+            return
+        }
         activityStore.record(
             category: .control,
             title: "Control requested",
@@ -115,7 +139,7 @@ final class SessionViewModel: ObservableObject {
             hostLabel: host.displayLabel,
             sessionID: session.sessionId
         )
-        await socket.requestControl()
+        controllerSocket.connect(host: host, sessionId: session.sessionId, token: token)
     }
 
     func releaseControl() async {
@@ -126,25 +150,25 @@ final class SessionViewModel: ObservableObject {
             hostLabel: host.displayLabel,
             sessionID: session.sessionId
         )
-        await socket.releaseControl()
+        await controllerSocket.releaseControl()
     }
 
     func sendInput() async {
         let payload = inputText
         guard !payload.isEmpty, canSendInput else { return }
         inputText = ""
-        await socket.sendInput(payload)
+        await controllerSocket.sendInput(payload)
     }
 
     func sendTerminalInput(_ data: String) async {
         guard !data.isEmpty, canSendInput else { return }
-        await socket.sendInput(data)
+        await controllerSocket.sendInput(data)
     }
 
     func sendResizeIfChanged(_ resize: TerminalResize) async {
         guard resize != terminalResize else { return }
         terminalResize = resize
-        await socket.sendResize(resize)
+        await controllerSocket.sendResize(resize)
     }
 
     func loadSnapshot(force: Bool) async {
@@ -210,29 +234,15 @@ final class SessionViewModel: ObservableObject {
     }
 
     func stopSession() async {
-        do {
-            let client = HostClient(host: host)
-            try await client.stopSession(sessionId: session.sessionId, host: host, token: token)
-            activityStore.record(
-                category: .explorer,
-                title: "Session stop requested",
-                message: "Sent a stop request for the focused session.",
-                hostLabel: host.displayLabel,
-                sessionID: session.sessionId
-            )
-            await loadSnapshot(force: true)
-            publishSessionStateChanged()
-        } catch {
-            lastError = error.localizedDescription
-            activityStore.record(
-                severity: .error,
-                category: .explorer,
-                title: "Session stop failed",
-                message: error.localizedDescription,
-                hostLabel: host.displayLabel,
-                sessionID: session.sessionId
-            )
-        }
+        guard canSendInput else { return }
+        await controllerSocket.stopSession()
+        activityStore.record(
+            category: .explorer,
+            title: "Session stop requested",
+            message: "Sent a stop request on the controller stream.",
+            hostLabel: host.displayLabel,
+            sessionID: session.sessionId
+        )
     }
 
     private func apply(event: SessionSocketEvent) {
@@ -293,10 +303,15 @@ final class SessionViewModel: ObservableObject {
                     sessionID: metadata.sessionId
                 )
             }
+            if controllerState == .connected, metadata.controllerKind != "remote" {
+                controllerSocket.disconnect(reason: "Control moved to another client.")
+            }
             publishSessionStateChanged()
         case let .terminalOutput(output):
+            guard controllerState != .connected else { return }
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
+            controllerSocket.disconnect(reason: "Session exited.")
             session = SessionSummary(
                 sessionId: session.sessionId,
                 provider: session.provider,
@@ -355,6 +370,56 @@ final class SessionViewModel: ObservableObject {
         }
     }
 
+    private func apply(controllerEvent: SessionControllerSocketEvent) {
+        switch controllerEvent {
+        case .ready:
+            activityStore.record(
+                category: .control,
+                title: "Control granted",
+                message: "Focused terminal is now using the privileged controller stream.",
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
+            Task {
+                await controllerSocket.sendResize(terminalResize)
+                await controllerSocket.sendInput("\u{0C}")
+            }
+        case let .terminalOutput(data):
+            terminal.appendBase64Raw(data.base64EncodedString())
+        case .released:
+            activityStore.record(
+                category: .control,
+                title: "Control released",
+                message: "Focused terminal returned to observer mode.",
+                hostLabel: host.displayLabel,
+                sessionID: session.sessionId
+            )
+        case let .rejected(payload):
+            lastError = "\(payload.code): \(payload.message)"
+            activityStore.record(
+                severity: .warning,
+                category: .control,
+                title: "Control request rejected",
+                message: payload.message,
+                hostLabel: host.displayLabel,
+                sessionID: payload.sessionId ?? session.sessionId
+            )
+        case let .sessionExited(payload):
+            controllerSocket.disconnect(reason: "Session exited.")
+            apply(event: .sessionExited(payload))
+        case let .error(payload):
+            lastError = "\(payload.code): \(payload.message)"
+            activityStore.record(
+                severity: .error,
+                category: .control,
+                title: "Controller error",
+                message: "\(payload.code): \(payload.message)",
+                hostLabel: host.displayLabel,
+                sessionID: payload.sessionId ?? session.sessionId
+            )
+        }
+    }
+
     private func updateSession(from snapshot: SessionSnapshot) {
         session = SessionSummary(
             sessionId: snapshot.sessionId,
@@ -402,15 +467,15 @@ final class SessionViewModel: ObservableObject {
         terminal.ingestBase64(Data(tail.utf8).base64EncodedString(), seqEnd: snapshot?.currentSequence ?? 0)
     }
 
-    private func recordSocketState(_ state: SessionSocket.ConnectionState) {
+    private func recordSocketState(_ state: SessionSocket.ConnectionState, title: String) {
         switch state {
         case .idle, .connecting:
             return
         case .connected:
             activityStore.record(
                 category: .socket,
-                title: "Session connected",
-                message: "Live socket is connected.",
+                title: "\(title) connected",
+                message: "\(title) socket is connected.",
                 hostLabel: host.displayLabel,
                 sessionID: session.sessionId
             )
@@ -418,8 +483,8 @@ final class SessionViewModel: ObservableObject {
             activityStore.record(
                 severity: reason == nil ? .info : .warning,
                 category: .socket,
-                title: "Session disconnected",
-                message: reason ?? "The live socket disconnected.",
+                title: "\(title) disconnected",
+                message: reason ?? "\(title) socket disconnected.",
                 hostLabel: host.displayLabel,
                 sessionID: session.sessionId
             )

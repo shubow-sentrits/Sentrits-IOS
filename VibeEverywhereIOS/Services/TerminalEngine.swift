@@ -49,6 +49,16 @@ final class TerminalEngine: ObservableObject {
         ingestBase64(dataBase64, seqStart: seqEnd, seqEnd: seqEnd)
     }
 
+    func appendBase64Raw(_ dataBase64: String) {
+        guard Data(base64Encoded: dataBase64) != nil else { return }
+        outputChunksBase64.append(dataBase64)
+    }
+
+    func resetSequenceTracking() {
+        nextExpectedSequence = 0
+        pendingChunks.removeAll()
+    }
+
     private func flushPendingChunksIfPossible() {
         if outputChunksBase64.isEmpty, nextExpectedSequence == 0, let firstSequence = pendingChunks.keys.min() {
             nextExpectedSequence = firstSequence
