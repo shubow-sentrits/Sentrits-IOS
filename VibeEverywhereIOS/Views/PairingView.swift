@@ -23,17 +23,18 @@ struct PairingView: View {
 
             ScrollView {
                 VStack(spacing: 18) {
+                    titleRow
                     headerCard
                     discoveryCard
                     savedDevicesCard
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
             .scrollIndicators(.hidden)
         }
-        .navigationTitle("Pairing")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             guard autoStartDiscovery else { return }
             hostsStore.startDiscovery()
@@ -131,6 +132,19 @@ struct PairingView: View {
                 }
             }
         }
+    }
+
+    private var titleRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Pairing")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.94))
+
+            Text("Discover and trust nearby hosts.")
+                .font(.subheadline)
+                .foregroundStyle(Color.white.opacity(0.62))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var discoveryCard: some View {

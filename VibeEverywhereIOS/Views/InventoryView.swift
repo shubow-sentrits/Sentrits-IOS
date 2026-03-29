@@ -39,12 +39,13 @@ struct InventoryView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
+                        titleRow
                         summaryPanel
                         controlsRow
                         sectionList
                     }
                     .padding(.horizontal, 18)
-                    .padding(.top, 20)
+                    .padding(.top, 8)
                     .padding(.bottom, 120)
                 }
                 .scrollIndicators(.hidden)
@@ -60,15 +61,7 @@ struct InventoryView: View {
 
         let withChrome = AnyView(
             base
-                .navigationTitle("Inventory")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        if store.isRefreshing {
-                            ProgressView()
-                                .tint(inventoryAccent)
-                        }
-                    }
-                }
+                .toolbar(.hidden, for: .navigationBar)
         )
 
         let withRefresh = AnyView(
@@ -168,6 +161,29 @@ struct InventoryView: View {
         .padding(18)
         .background(panelBackground.opacity(0.92))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var titleRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Inventory")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.94))
+
+                Text("Create, stop, and connect sessions by device.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.white.opacity(0.62))
+            }
+
+            Spacer()
+
+            if store.isRefreshing {
+                ProgressView()
+                    .tint(inventoryAccent)
+                    .padding(.top, 6)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var controlsRow: some View {

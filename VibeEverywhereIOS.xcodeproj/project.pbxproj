@@ -37,6 +37,7 @@
 		A00000000000000000000057 /* ActivityLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000058 /* ActivityLogStore.swift */; };
 		A00000000000000000000059 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000005A /* ActivityView.swift */; };
 		A00000000000000000000060 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000061 /* PreviewSupport.swift */; };
+		A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000063 /* ExplorerWorkspaceView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +73,7 @@
 		A00000000000000000000058 /* ActivityLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000005A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		A00000000000000000000061 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000063 /* ExplorerWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerWorkspaceView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -159,6 +161,7 @@
 				A0000000000000000000001D /* TerminalTextView.swift */,
 				A00000000000000000000046 /* InventoryView.swift */,
 				A0000000000000000000001E /* ConnectView.swift */,
+				A00000000000000000000063 /* ExplorerWorkspaceView.swift */,
 				A0000000000000000000001F /* PairingView.swift */,
 				A00000000000000000000020 /* SessionsView.swift */,
 				A00000000000000000000022 /* SessionDetailView.swift */,
@@ -278,6 +281,7 @@
 				A0000000000000000000000D /* TerminalTextView.swift in Sources */,
 				A00000000000000000000043 /* AppShellView.swift in Sources */,
 				A0000000000000000000000E /* ConnectView.swift in Sources */,
+				A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */,
 				A00000000000000000000045 /* InventoryView.swift in Sources */,
 				A0000000000000000000000F /* PairingView.swift in Sources */,
 				A00000000000000000000010 /* SessionsView.swift in Sources */,

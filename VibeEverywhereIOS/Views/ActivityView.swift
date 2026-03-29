@@ -12,17 +12,18 @@ struct ActivityView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
+                    titleRow
                     header
                     summaryCards
                     activitySections
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
         }
-        .navigationTitle("Activity")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var activityBackground: some View {
@@ -58,6 +59,19 @@ struct ActivityView: View {
                 .font(.callout)
                 .foregroundStyle(ActivityPalette.muted)
         }
+    }
+
+    private var titleRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Activity")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(ActivityPalette.foreground)
+
+            Text("Important host and session events.")
+                .font(.subheadline)
+                .foregroundStyle(ActivityPalette.muted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var summaryCards: some View {
