@@ -298,7 +298,8 @@ private struct ExplorerWorkspaceView: View {
 
     var body: some View {
         ZStack {
-            Color.explorerBackground.ignoresSafeArea()
+            explorerBackground
+                .ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -309,6 +310,7 @@ private struct ExplorerWorkspaceView: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 16)
             }
+            .scrollIndicators(.hidden)
             .refreshable {
                 await explorerStore.syncConnectedHosts()
             }
@@ -335,6 +337,26 @@ private struct ExplorerWorkspaceView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(explorerStore.errorMessage ?? "")
+        }
+    }
+
+    private var explorerBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.explorerBackground, Color(red: 0.08, green: 0.10, blue: 0.09)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    Color.explorerAccent.opacity(0.12),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 28,
+                endRadius: 360
+            )
         }
     }
 

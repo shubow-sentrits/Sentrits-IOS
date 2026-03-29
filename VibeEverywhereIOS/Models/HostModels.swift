@@ -380,11 +380,21 @@ struct SessionSummary: Codable, Identifiable, Hashable {
 
     var isEnded: Bool {
         switch (inventoryState ?? status).lowercased() {
-        case "ended", "exited", "stopped":
+        case "ended", "exited", "stopped", "archived", "error":
             return true
         default:
             return false
         }
+    }
+
+    var isConnectable: Bool {
+        if isEnded {
+            return false
+        }
+        if let isActive {
+            return isActive
+        }
+        return isExplorerEligible
     }
 
     var normalizedGroupTags: [String] {

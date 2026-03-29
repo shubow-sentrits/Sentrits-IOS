@@ -30,6 +30,7 @@ struct PairingView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)
             }
+            .scrollIndicators(.hidden)
         }
         .navigationTitle("Pairing")
         .navigationBarTitleDisplayMode(.large)
@@ -83,7 +84,26 @@ struct PairingView: View {
     }
 
     private var background: some View {
-        Color(red: 0.04, green: 0.05, blue: 0.06)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.06, blue: 0.08),
+                    Color(red: 0.08, green: 0.10, blue: 0.09)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    Color(red: 0.74, green: 0.81, blue: 0.54).opacity(0.16),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 320
+            )
+        }
         .ignoresSafeArea()
     }
 

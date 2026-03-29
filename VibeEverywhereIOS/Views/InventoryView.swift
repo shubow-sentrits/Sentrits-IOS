@@ -35,6 +35,7 @@ struct InventoryView: View {
         let base = AnyView(
             ZStack {
                 inventoryBackground
+                    .ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -293,6 +294,7 @@ struct InventoryView: View {
 
     private func sessionCard(section: InventoryDeviceSection, session: SessionSummary) -> some View {
         let isConnected = explorerStore.isConnected(sessionID: session.sessionId, hostID: section.host.id)
+        let canConnect = session.isConnectable
 
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
@@ -371,8 +373,8 @@ struct InventoryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(session.isEnded ? .gray.opacity(0.55) : (isConnected ? .gray.opacity(0.7) : inventoryAccent))
-                .disabled(section.token == nil || session.isEnded)
+                .tint(canConnect ? (isConnected ? .gray.opacity(0.7) : inventoryAccent) : .gray.opacity(0.55))
+                .disabled(section.token == nil || !canConnect)
 
                 Button(role: .destructive) {
                     Task {
@@ -482,8 +484,27 @@ struct InventoryView: View {
         }
     }
 
-    private var inventoryBackground: Color {
-        Color(red: 0.04, green: 0.05, blue: 0.06)
+    private var inventoryBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.05, blue: 0.06),
+                    Color(red: 0.07, green: 0.09, blue: 0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    inventoryAccent.opacity(0.14),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 24,
+                endRadius: 340
+            )
+        }
     }
 
     private var panelBackground: Color {

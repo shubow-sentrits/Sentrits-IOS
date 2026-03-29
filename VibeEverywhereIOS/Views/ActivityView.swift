@@ -6,18 +6,46 @@ struct ActivityView: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header
-                summaryCards
-                activitySections
+        ZStack {
+            activityBackground
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    header
+                    summaryCards
+                    activitySections
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 24)
+            .scrollIndicators(.hidden)
         }
-        .background(ActivityPalette.background.ignoresSafeArea())
         .navigationTitle("Activity")
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    private var activityBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    ActivityPalette.background,
+                    Color(red: 18 / 255, green: 22 / 255, blue: 24 / 255)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    ActivityPalette.primary.opacity(0.14),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 26,
+                endRadius: 340
+            )
+        }
     }
 
     private var header: some View {
