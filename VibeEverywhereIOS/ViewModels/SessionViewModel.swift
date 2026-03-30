@@ -22,6 +22,7 @@ final class SessionViewModel: ObservableObject {
     private let controllerSocket: SessionControllerSocket
     private let activityStore: ActivityLogStore
     private var hasLoadedSnapshot = false
+    private var activeControllerClientId: String?
 
     init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
@@ -49,6 +50,7 @@ final class SessionViewModel: ObservableObject {
                 self?.controllerState = state
                 self?.recordSocketState(state, title: "Controller")
                 if case .disconnected = state {
+                    self?.activeControllerClientId = nil
                     self?.terminal.resetSequenceTracking()
                 }
             }
@@ -303,7 +305,9 @@ final class SessionViewModel: ObservableObject {
                     sessionID: metadata.sessionId
                 )
             }
-            if controllerState == .connected, metadata.controllerKind != "remote" {
+            if controllerState == .connected,
+               (metadata.controllerKind != "remote" ||
+                (activeControllerClientId != nil && metadata.controllerClientId != activeControllerClientId)) {
                 controllerSocket.disconnect(reason: "Control moved to another client.")
             }
             publishSessionStateChanged()
@@ -372,7 +376,8 @@ final class SessionViewModel: ObservableObject {
 
     private func apply(controllerEvent: SessionControllerSocketEvent) {
         switch controllerEvent {
-        case .ready:
+        case let .ready(payload):
+            activeControllerClientId = payload.controllerClientId
             activityStore.record(
                 category: .control,
                 title: "Control granted",
@@ -382,7 +387,6 @@ final class SessionViewModel: ObservableObject {
             )
             Task {
                 await controllerSocket.sendResize(terminalResize)
-                await controllerSocket.sendInput("\u{0C}")
             }
         case let .terminalOutput(data):
             terminal.appendBase64Raw(data.base64EncodedString())

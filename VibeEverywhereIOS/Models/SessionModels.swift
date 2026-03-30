@@ -68,6 +68,7 @@ struct SessionExitedPayload: Codable {
 struct ControllerReadyPayload: Codable {
     let sessionId: String
     let controllerKind: String
+    let controllerClientId: String?
 }
 
 struct ControllerReleasedPayload: Codable {
