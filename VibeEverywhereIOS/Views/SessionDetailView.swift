@@ -88,13 +88,13 @@ struct SessionDetailView: View {
 
     private var focusedBackground: some View {
         LinearGradient(
-            colors: [Color.focusedBackgroundTop, Color.focusedBackgroundBottom],
+            colors: [Color("FocusedBackgroundTop"), Color("FocusedBackgroundBottom")],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         .overlay(
             RadialGradient(
-                colors: [Color.focusedAccent.opacity(0.14), .clear],
+                colors: [Color("FocusedAccent").opacity(0.14), .clear],
                 center: .topTrailing,
                 startRadius: 40,
                 endRadius: 360
@@ -118,9 +118,9 @@ struct SessionDetailView: View {
                 } label: {
                     Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.focusedText)
+                        .foregroundStyle(Color("FocusedText"))
                         .frame(width: 32, height: 32)
-                        .background(Color.focusedPanelSoft.opacity(0.9))
+                        .background(Color("FocusedPanelSoft").opacity(0.9))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -129,7 +129,7 @@ struct SessionDetailView: View {
 
             Text(viewModel.session.workspaceRoot)
                 .font(.caption)
-                .foregroundStyle(Color.focusedMuted)
+                .foregroundStyle(Color("FocusedMuted"))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(height: 16, alignment: .leading)
@@ -154,7 +154,7 @@ struct SessionDetailView: View {
             if !viewModel.terminal.hasContent {
                 Text("Waiting for terminal output...")
                     .font(.footnote)
-                    .foregroundStyle(Color.focusedMuted)
+                    .foregroundStyle(Color("FocusedMuted"))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)
@@ -174,7 +174,7 @@ struct SessionDetailView: View {
             modeIndicator(
                 title: viewModel.canSendInput ? "You have control" : "Observer Mode",
                 detail: viewModel.canSendInput ? "Direct terminal input is live" : "You are watching this session",
-                tone: viewModel.canSendInput ? Color(red: 0.82, green: 0.9, blue: 0.74) : Color.focusedMuted
+                tone: viewModel.canSendInput ? Color("FocusedActive") : Color("FocusedMuted")
             )
 
             Spacer(minLength: 4)
@@ -185,7 +185,7 @@ struct SessionDetailView: View {
                 }
                 .font(.system(size: 12, weight: Font.Weight.bold))
                 .buttonStyle(.bordered)
-                .tint(Color.focusedAccent)
+                .tint(Color("FocusedAccent"))
                 .frame(height: 24)
 
                 Button(role: .destructive) {
@@ -202,14 +202,14 @@ struct SessionDetailView: View {
                     Task { await viewModel.requestControl() }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.focusedAccent)
+                .tint(Color("FocusedAccent"))
                 .frame(height: 24)
             }
         }
         .frame(height: 60)
         .padding(.horizontal, 14)
         .padding(.vertical, 2)
-        .background(Color.focusedGlass)
+        .background(Color("FocusedGlass"))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -241,8 +241,8 @@ struct SessionDetailView: View {
                 .lineLimit(1)
                 .padding(.horizontal, 14)
                 .frame(height: 46)
-                .background(Color.focusedPanelSoft.opacity(0.92))
-                .foregroundStyle(viewModel.canSendInput ? Color.focusedText : Color.focusedMuted)
+                .background(Color("FocusedPanelSoft").opacity(0.92))
+                .foregroundStyle(viewModel.canSendInput ? Color("FocusedText") : Color("FocusedMuted"))
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .disabled(!viewModel.canSendInput)
 
@@ -250,7 +250,7 @@ struct SessionDetailView: View {
                     Task { await viewModel.sendInput() }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.focusedAccent)
+                .tint(Color("FocusedAccent"))
                 .frame(height: 46)
                 .disabled(!viewModel.canSendInput || viewModel.inputText.isEmpty)
             }
@@ -258,7 +258,7 @@ struct SessionDetailView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.focusedGlass)
+        .background(Color("FocusedGlass"))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -270,7 +270,7 @@ struct SessionDetailView: View {
         VStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { index in
                 Capsule()
-                    .fill(index == keyPageIndex ? Color.focusedAccent : Color.white.opacity(0.14))
+                    .fill(index == keyPageIndex ? Color("FocusedAccent") : Color.white.opacity(0.14))
                     .frame(width: 6, height: index == keyPageIndex ? 18 : 8)
             }
         }
@@ -310,7 +310,7 @@ struct SessionDetailView: View {
                 }
                 .frame(height: 24)
                 .buttonStyle(.bordered)
-                .tint(Color.focusedControlKey)
+                .tint(Color("FocusedControlKey"))
                 .disabled(!viewModel.canSendInput)
             }
         }
@@ -348,7 +348,7 @@ struct SessionDetailView: View {
                     .frame(height: 15)
             }
             .buttonStyle(.bordered)
-            .tint(Color.focusedControlKey)
+            .tint(Color("FocusedControlKey"))
             .frame(height: 24)
             .disabled(!viewModel.canSendInput && key.payload != "__MORE__")
         }
@@ -370,7 +370,7 @@ struct SessionDetailView: View {
             HStack {
                 Text("Context")
                     .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color.focusedText)
+                    .foregroundStyle(Color("FocusedText"))
 
                 Spacer()
 
@@ -381,9 +381,9 @@ struct SessionDetailView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.focusedMuted)
+                        .foregroundStyle(Color("FocusedMuted"))
                         .frame(width: 28, height: 28)
-                        .background(Color.focusedPanelSoft.opacity(0.9))
+                        .background(Color("FocusedPanelSoft").opacity(0.9))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -392,14 +392,14 @@ struct SessionDetailView: View {
             contextSection(title: "Project Path") {
                 Text(viewModel.session.workspaceRoot)
                     .font(.system(.footnote, design: .monospaced))
-                    .foregroundStyle(Color.focusedText)
+                    .foregroundStyle(Color("FocusedText"))
                     .textSelection(.enabled)
             }
 
             contextSection(title: "Git Status") {
                 Text(gitSummary)
                     .font(.system(.footnote, design: .monospaced))
-                    .foregroundStyle(Color.focusedText)
+                    .foregroundStyle(Color("FocusedText"))
             }
 
             contextSection(title: "Recent Files") {
@@ -408,14 +408,14 @@ struct SessionDetailView: View {
                         ForEach(Array(viewModel.recentFiles.prefix(5)), id: \.self) { file in
                             Text(file)
                                 .font(.footnote)
-                                .foregroundStyle(Color.focusedText)
+                                .foregroundStyle(Color("FocusedText"))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
                     } else {
                         Text("No recent files yet.")
                             .font(.footnote)
-                            .foregroundStyle(Color.focusedMuted)
+                            .foregroundStyle(Color("FocusedMuted"))
                     }
                 }
             }
@@ -424,7 +424,7 @@ struct SessionDetailView: View {
         }
         .padding(18)
         .background(.ultraThinMaterial)
-        .background(Color.focusedPanel.opacity(0.92))
+        .background(Color("FocusedPanel").opacity(0.92))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
@@ -450,7 +450,7 @@ struct SessionDetailView: View {
 
             Text(detail)
                 .font(.caption2)
-                .foregroundStyle(Color.focusedMuted)
+                .foregroundStyle(Color("FocusedMuted"))
                 .lineLimit(1)
         }
         .frame(maxHeight: .infinity, alignment: .center)
@@ -460,12 +460,12 @@ struct SessionDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.focusedMuted)
+                .foregroundStyle(Color("FocusedMuted"))
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
-        .background(Color.focusedPanelSoft.opacity(0.88))
+        .background(Color("FocusedPanelSoft").opacity(0.88))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -579,18 +579,6 @@ private struct TerminalControlKey {
     let label: String
     let payload: String
     let systemImage: String
-}
-
-private extension Color {
-    static let focusedBackgroundTop = Color(red: 0.06, green: 0.07, blue: 0.08)
-    static let focusedBackgroundBottom = Color(red: 0.08, green: 0.1, blue: 0.12)
-    static let focusedPanel = Color(red: 0.12, green: 0.14, blue: 0.16)
-    static let focusedPanelSoft = Color(red: 0.18, green: 0.2, blue: 0.22)
-    static let focusedGlass = Color.white.opacity(0.06)
-    static let focusedText = Color(red: 0.95, green: 0.95, blue: 0.92)
-    static let focusedMuted = Color(red: 0.66, green: 0.69, blue: 0.72)
-    static let focusedAccent = Color(red: 0.76, green: 0.83, blue: 0.57)
-    static let focusedControlKey = Color(red: 0.42, green: 0.5, blue: 0.62)
 }
 
 #Preview("Focused Session") {

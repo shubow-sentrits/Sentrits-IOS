@@ -41,7 +41,7 @@ struct ConnectView: View {
                 Label("Activity", systemImage: "clock.arrow.circlepath")
             }
         }
-        .tint(Color(red: 0.87, green: 0.69, blue: 0.44))
+        .tint(Color("AppTint"))
     }
 }
 
@@ -53,9 +53,9 @@ private struct ShellPlaceholderView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.08, green: 0.09, blue: 0.11),
-                    Color(red: 0.15, green: 0.12, blue: 0.10),
-                    Color(red: 0.05, green: 0.06, blue: 0.08)
+                    Color("ConnectGradientStart"),
+                    Color("ConnectGradientMid"),
+                    Color("ConnectGradientEnd")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

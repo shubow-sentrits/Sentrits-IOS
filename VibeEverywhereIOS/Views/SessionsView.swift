@@ -95,18 +95,18 @@ struct SessionsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(hostInfoTitle)
                         .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color.explorerHighlight)
+                        .foregroundStyle(Color("ExplorerHighlight"))
 
                     Text(host.displayLabel)
                         .font(.subheadline)
-                        .foregroundStyle(Color.explorerMuted)
+                        .foregroundStyle(Color("ExplorerMuted"))
                 }
 
                 Spacer()
 
                 if viewModel.isLoading {
                     ProgressView()
-                        .tint(Color.explorerHighlight)
+                        .tint(Color("ExplorerHighlight"))
                 }
             }
 
@@ -124,7 +124,7 @@ struct SessionsView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.explorerPanel)
+        .background(Color("ExplorerPanel"))
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)
@@ -143,8 +143,8 @@ struct SessionsView: View {
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
-                            .background(viewModel.selectedGroupTag == tag ? Color.explorerAccent : Color.explorerPanelSoft)
-                            .foregroundStyle(viewModel.selectedGroupTag == tag ? Color.explorerBackground : Color.explorerText)
+                            .background(viewModel.selectedGroupTag == tag ? Color("ExplorerAccent") : Color("ExplorerPanelSoft"))
+                            .foregroundStyle(viewModel.selectedGroupTag == tag ? Color("ExplorerBackground") : Color("ExplorerText"))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -159,15 +159,15 @@ struct SessionsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("No connected sessions match this group.")
                     .font(.headline)
-                    .foregroundStyle(Color.explorerText)
+                    .foregroundStyle(Color("ExplorerText"))
 
                 Text("Explorer only shows live sessions. Pull to refresh or switch back to All.")
                     .font(.subheadline)
-                    .foregroundStyle(Color.explorerMuted)
+                    .foregroundStyle(Color("ExplorerMuted"))
             }
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.explorerPanelSoft)
+            .background(Color("ExplorerPanelSoft"))
             .clipShape(RoundedRectangle(cornerRadius: 24))
         } else {
             LazyVStack(spacing: 16) {
@@ -184,11 +184,11 @@ struct SessionsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(sessionViewModel.session.displayTitle)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.explorerText)
+                        .foregroundStyle(Color("ExplorerText"))
 
                     Text(sessionViewModel.session.workspaceRoot)
                         .font(.footnote)
-                        .foregroundStyle(Color.explorerMuted)
+                        .foregroundStyle(Color("ExplorerMuted"))
                         .lineLimit(1)
                 }
 
@@ -199,7 +199,7 @@ struct SessionsView: View {
                         .font(.footnote.weight(.semibold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.explorerAccent)
+                .tint(Color("ExplorerAccent"))
             }
 
             TerminalTextView(
@@ -216,7 +216,7 @@ struct SessionsView: View {
                 explorerPill(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
                 explorerPill(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
-                    explorerPill(branch, tone: Color.explorerAccent.opacity(0.8))
+                    explorerPill(branch, tone: Color("ExplorerAccent").opacity(0.8))
                 }
             }
 
@@ -235,8 +235,8 @@ struct SessionsView: View {
                                 .font(.caption.weight(.medium))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 7)
-                                .background(Color.explorerPanelSoft)
-                                .foregroundStyle(Color.explorerText)
+                                .background(Color("ExplorerPanelSoft"))
+                                .foregroundStyle(Color("ExplorerText"))
                                 .clipShape(Capsule())
                             }
                             .buttonStyle(.plain)
@@ -256,7 +256,7 @@ struct SessionsView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .tint(Color.explorerHighlight)
+                .tint(Color("ExplorerHighlight"))
 
                 if viewModel.selectedGroupTag != "all",
                    !sessionViewModel.session.normalizedGroupTags.contains(viewModel.selectedGroupTag) {
@@ -292,7 +292,7 @@ struct SessionsView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.explorerPanel)
+        .background(Color("ExplorerPanel"))
         .overlay(
             RoundedRectangle(cornerRadius: 26)
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)
@@ -380,14 +380,14 @@ struct SessionsView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.explorerText)
+                .foregroundStyle(Color("ExplorerText"))
             Text(label.uppercased())
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.explorerMuted)
+                .foregroundStyle(Color("ExplorerMuted"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.explorerPanelSoft)
+        .background(Color("ExplorerPanelSoft"))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
@@ -403,13 +403,13 @@ struct SessionsView: View {
 
     private var explorerBackground: some View {
         LinearGradient(
-            colors: [Color.explorerBackground, Color(red: 0.08, green: 0.1, blue: 0.09)],
+            colors: [Color("ExplorerBackground"), Color("ExplorerBackgroundAlt")],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         .overlay(
             RadialGradient(
-                colors: [Color.explorerAccent.opacity(0.18), .clear],
+                colors: [Color("ExplorerAccent").opacity(0.18), .clear],
                 center: .topTrailing,
                 startRadius: 40,
                 endRadius: 440
@@ -438,14 +438,4 @@ struct SessionsView: View {
             autoStart: false
         )
     }
-}
-
-private extension Color {
-    static let explorerBackground = Color(red: 0.05, green: 0.06, blue: 0.06)
-    static let explorerPanel = Color(red: 0.11, green: 0.13, blue: 0.12)
-    static let explorerPanelSoft = Color(red: 0.16, green: 0.18, blue: 0.17)
-    static let explorerText = Color(red: 0.95, green: 0.94, blue: 0.9)
-    static let explorerMuted = Color(red: 0.67, green: 0.7, blue: 0.67)
-    static let explorerAccent = Color(red: 0.74, green: 0.81, blue: 0.54)
-    static let explorerHighlight = Color(red: 0.86, green: 0.9, blue: 0.71)
 }

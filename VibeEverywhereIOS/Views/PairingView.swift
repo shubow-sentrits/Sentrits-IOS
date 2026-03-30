@@ -88,8 +88,8 @@ struct PairingView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.05, green: 0.06, blue: 0.08),
-                    Color(red: 0.08, green: 0.10, blue: 0.09)
+                    Color("ExplorerBackground"),
+                    Color("ExplorerBackgroundAlt")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -97,7 +97,7 @@ struct PairingView: View {
 
             RadialGradient(
                 colors: [
-                    Color(red: 0.74, green: 0.81, blue: 0.54).opacity(0.16),
+                    Color("InventoryAccent").opacity(0.16),
                     .clear
                 ],
                 center: .topTrailing,
@@ -117,7 +117,7 @@ struct PairingView: View {
                 if let discoveryStatus = hostsStore.discoveryStatus {
                     Text(discoveryStatus)
                         .font(.footnote)
-                        .foregroundStyle(inventoryAccent)
+                        .foregroundStyle(Color("InventoryAccent"))
                 }
                 HStack {
                     Spacer()
@@ -128,7 +128,7 @@ struct PairingView: View {
                             .font(.footnote.weight(.bold))
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(inventoryAccent)
+                    .tint(Color("InventoryAccent"))
                 }
             }
         }
@@ -200,7 +200,7 @@ struct PairingView: View {
                                         isHostDetailPresented = true
                                     }
                                     .buttonStyle(.borderedProminent)
-                                    .tint(inventoryAccent)
+                                    .tint(Color("InventoryAccent"))
                                 }
                             }
                         }
@@ -287,7 +287,7 @@ struct PairingView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color(red: 0.84, green: 0.63, blue: 0.39))
+                    .background(Color("PairingActionFill"))
                     .foregroundStyle(Color.black.opacity(0.82))
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
@@ -297,7 +297,7 @@ struct PairingView: View {
                 if case let .failed(message) = hostsStore.verificationState {
                     Text(message)
                         .font(.footnote)
-                        .foregroundStyle(Color(red: 1, green: 0.72, blue: 0.68))
+                        .foregroundStyle(Color("PairingError"))
                 }
             }
         }
@@ -348,7 +348,7 @@ struct PairingView: View {
                                         isHostDetailPresented = true
                                     }
                                     .buttonStyle(.borderedProminent)
-                                    .tint(inventoryAccent)
+                                    .tint(Color("InventoryAccent"))
                                 } else {
                                     statusChip("Paired")
                                 }
@@ -475,8 +475,8 @@ struct PairingView: View {
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(inventoryAccent.opacity(0.18))
-            .foregroundStyle(inventoryAccent)
+            .background(Color("InventoryAccent").opacity(0.18))
+            .foregroundStyle(Color("InventoryAccent"))
             .clipShape(Capsule())
     }
 
@@ -499,9 +499,6 @@ struct PairingView: View {
             .fill(Color.white.opacity(0.06))
     }
 
-    private var inventoryAccent: Color {
-        Color(red: 0.74, green: 0.81, blue: 0.54)
-    }
 }
 
 private struct PairingRequestSection: View {
@@ -572,7 +569,7 @@ private struct PairingRequestSection: View {
         Button("Start Pairing") {
             Task { await viewModel.start() }
         }
-        .buttonStyle(ActionButtonStyle(fill: Color(red: 0.74, green: 0.81, blue: 0.54)))
+        .buttonStyle(ActionButtonStyle(fill: Color("InventoryAccent")))
     }
 
     private var requestingContent: some View {
@@ -601,7 +598,7 @@ private struct PairingRequestSection: View {
     private func approvedContent(_ deviceName: String?) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Pairing approved.")
-                .foregroundStyle(Color(red: 0.75, green: 0.91, blue: 0.77))
+                .foregroundStyle(Color("PairingSuccess"))
             if let deviceName {
                 Text("Trusted as \(deviceName).")
                     .foregroundStyle(Color.white.opacity(0.72))
@@ -612,7 +609,7 @@ private struct PairingRequestSection: View {
     private func retryState(message: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(message)
-                .foregroundStyle(Color(red: 1, green: 0.72, blue: 0.68))
+                .foregroundStyle(Color("PairingError"))
             Button("Start New Pairing Request") {
                 Task { await viewModel.start() }
             }

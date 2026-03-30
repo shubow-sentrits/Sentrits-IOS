@@ -30,8 +30,8 @@ struct ActivityView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    ActivityPalette.background,
-                    Color(red: 18 / 255, green: 22 / 255, blue: 24 / 255)
+                    Color("ActivityBackground"),
+                    Color("ActivityBackgroundAlt")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -39,7 +39,7 @@ struct ActivityView: View {
 
             RadialGradient(
                 colors: [
-                    ActivityPalette.primary.opacity(0.14),
+                    Color("ActivityPrimary").opacity(0.14),
                     .clear
                 ],
                 center: .topTrailing,
@@ -53,11 +53,11 @@ struct ActivityView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("System Stream")
                 .font(.system(.footnote, design: .monospaced).weight(.medium))
-                .foregroundStyle(ActivityPalette.secondary)
+                .foregroundStyle(Color("ActivitySecondary"))
                 .textCase(.uppercase)
             Text("Important client and session events, trimmed to the signal you actually need.")
                 .font(.callout)
-                .foregroundStyle(ActivityPalette.muted)
+                .foregroundStyle(Color("ActivityMuted"))
         }
     }
 
@@ -65,11 +65,11 @@ struct ActivityView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Activity")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(ActivityPalette.foreground)
+                .foregroundStyle(Color("ActivityForeground"))
 
             Text("Important host and session events.")
                 .font(.subheadline)
-                .foregroundStyle(ActivityPalette.muted)
+                .foregroundStyle(Color("ActivityMuted"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -77,10 +77,10 @@ struct ActivityView: View {
     private var summaryCards: some View {
         let summary = activityStore.summary(calendar: calendar)
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-            ActivitySummaryCard(title: "Total Events", value: "\(summary.totalEvents)", tint: ActivityPalette.primary)
-            ActivitySummaryCard(title: "Today", value: "\(summary.eventsToday)", tint: ActivityPalette.foreground)
-            ActivitySummaryCard(title: "Warnings", value: "\(summary.warningCount)", tint: ActivityPalette.warning)
-            ActivitySummaryCard(title: "Active Hosts", value: "\(summary.activeHostCount)", tint: ActivityPalette.secondary)
+            ActivitySummaryCard(title: "Total Events", value: "\(summary.totalEvents)", tint: Color("ActivityPrimary"))
+            ActivitySummaryCard(title: "Today", value: "\(summary.eventsToday)", tint: Color("ActivityForeground"))
+            ActivitySummaryCard(title: "Warnings", value: "\(summary.warningCount)", tint: Color("ActivityWarning"))
+            ActivitySummaryCard(title: "Active Hosts", value: "\(summary.activeHostCount)", tint: Color("ActivitySecondary"))
         }
     }
 
@@ -94,23 +94,23 @@ struct ActivityView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("No activity yet")
                         .font(.system(.title3, design: .rounded).weight(.bold))
-                        .foregroundStyle(ActivityPalette.foreground)
+                        .foregroundStyle(Color("ActivityForeground"))
                     Text("Pair a host, refresh inventory, or open a session to start building the log.")
-                        .foregroundStyle(ActivityPalette.muted)
+                        .foregroundStyle(Color("ActivityMuted"))
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(ActivityPalette.surfaceLow, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(Color("ActivitySurfaceLow"), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             } else {
                 ForEach(sections, id: \.self) { day in
                     VStack(alignment: .leading, spacing: 14) {
                         HStack(spacing: 12) {
                             Text(sectionTitle(for: day))
                                 .font(.system(.caption, design: .monospaced).weight(.medium))
-                                .foregroundStyle(ActivityPalette.muted)
+                                .foregroundStyle(Color("ActivityMuted"))
                                 .textCase(.uppercase)
                             Rectangle()
-                                .fill(ActivityPalette.surfaceHigh)
+                                .fill(Color("ActivitySurfaceHigh"))
                                 .frame(height: 1)
                         }
 
@@ -144,14 +144,14 @@ private struct ActivitySummaryCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(ActivityPalette.muted)
+                .foregroundStyle(Color("ActivityMuted"))
             Text(value)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(ActivityPalette.surfaceLow, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color("ActivitySurfaceLow"), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -173,30 +173,30 @@ private struct ActivityEventRow: View {
                 HStack(alignment: .top) {
                     Text(entry.title)
                         .font(.system(.headline, design: .rounded).weight(.bold))
-                        .foregroundStyle(ActivityPalette.foreground)
+                        .foregroundStyle(Color("ActivityForeground"))
                     Spacer()
                     Text(entry.timestamp.formatted(.dateTime.hour().minute().second()))
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(ActivityPalette.muted)
+                        .foregroundStyle(Color("ActivityMuted"))
                 }
 
                 Text(entry.message)
                     .font(.subheadline)
-                    .foregroundStyle(ActivityPalette.muted)
+                    .foregroundStyle(Color("ActivityMuted"))
 
                 HStack(spacing: 8) {
                     ActivityTag(text: entry.severity.rawValue, tint: iconTint.opacity(0.9))
                     if let hostLabel = entry.hostLabel {
-                        ActivityTag(text: hostLabel, tint: ActivityPalette.secondary.opacity(0.9))
+                        ActivityTag(text: hostLabel, tint: Color("ActivitySecondary").opacity(0.9))
                     }
                     if let sessionID = entry.sessionID {
-                        ActivityTag(text: sessionID, tint: ActivityPalette.primary.opacity(0.9))
+                        ActivityTag(text: sessionID, tint: Color("ActivityPrimary").opacity(0.9))
                     }
                 }
             }
         }
         .padding(18)
-        .background(ActivityPalette.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color("ActivitySurface"), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private var iconName: String {
@@ -221,11 +221,11 @@ private struct ActivityEventRow: View {
     private var iconTint: Color {
         switch entry.severity {
         case .info:
-            return ActivityPalette.primary
+            return Color("ActivityPrimary")
         case .warning:
-            return ActivityPalette.warning
+            return Color("ActivityWarning")
         case .error:
-            return ActivityPalette.error
+            return Color("ActivityError")
         }
     }
 
@@ -245,21 +245,8 @@ struct ActivityTag: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(ActivityPalette.surfaceHigh, in: Capsule())
+            .background(Color("ActivitySurfaceHigh"), in: Capsule())
     }
-}
-
-enum ActivityPalette {
-    static let background = Color(red: 12 / 255, green: 14 / 255, blue: 16 / 255)
-    static let surfaceLow = Color(red: 17 / 255, green: 20 / 255, blue: 22 / 255)
-    static let surface = Color(red: 22 / 255, green: 26 / 255, blue: 30 / 255)
-    static let surfaceHigh = Color(red: 32 / 255, green: 38 / 255, blue: 44 / 255)
-    static let foreground = Color(red: 224 / 255, green: 230 / 255, blue: 237 / 255)
-    static let muted = Color(red: 166 / 255, green: 172 / 255, blue: 178 / 255)
-    static let primary = Color(red: 189 / 255, green: 206 / 255, blue: 137 / 255)
-    static let secondary = Color(red: 1, green: 191 / 255, blue: 0)
-    static let warning = Color(red: 238 / 255, green: 178 / 255, blue: 0)
-    static let error = Color(red: 238 / 255, green: 125 / 255, blue: 119 / 255)
 }
 
 #Preview("Activity") {

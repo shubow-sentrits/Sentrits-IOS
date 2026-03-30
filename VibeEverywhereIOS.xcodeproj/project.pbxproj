@@ -38,6 +38,7 @@
 		A00000000000000000000059 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000005A /* ActivityView.swift */; };
 		A00000000000000000000060 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000061 /* PreviewSupport.swift */; };
 		A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000063 /* ExplorerWorkspaceView.swift */; };
+		A00000000000000000000064 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000065 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +75,7 @@
 		A0000000000000000000005A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		A00000000000000000000061 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000063 /* ExplorerWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerWorkspaceView.swift; sourceTree = "<group>"; };
+		A00000000000000000000065 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -174,6 +176,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000024 /* Info.plist */,
+				A00000000000000000000065 /* Assets.xcassets */,
 				A00000000000000000000050 /* Terminal */,
 			);
 			path = Resources;
@@ -249,6 +252,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000064 /* Assets.xcassets in Resources */,
 				A00000000000000000000051 /* terminal.html in Resources */,
 				A00000000000000000000052 /* xterm.js in Resources */,
 				A00000000000000000000053 /* xterm.css in Resources */,

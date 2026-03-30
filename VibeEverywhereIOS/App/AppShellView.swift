@@ -69,7 +69,7 @@ struct AppShellView: View {
                 Label("Activity", systemImage: "clock.arrow.circlepath")
             }
         }
-        .tint(ActivityPalette.primary)
+        .tint(Color("AppTint"))
         .fullScreenCover(isPresented: Binding(
             get: { focusedSessionViewModel != nil },
             set: { if !$0 { clearFocusedSession() } }

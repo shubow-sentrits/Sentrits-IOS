@@ -159,7 +159,7 @@ struct InventoryView: View {
             }
         }
         .padding(18)
-        .background(panelBackground.opacity(0.92))
+        .background(Color("InventoryPanel").opacity(0.92))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
@@ -179,7 +179,7 @@ struct InventoryView: View {
 
             if store.isRefreshing {
                 ProgressView()
-                    .tint(inventoryAccent)
+                    .tint(Color("InventoryAccent"))
                     .padding(.top, 6)
             }
         }
@@ -193,7 +193,7 @@ struct InventoryView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.white.opacity(0.78))
             }
-            .tint(inventoryAccent)
+            .tint(Color("InventoryAccent"))
 
             Spacer()
         }
@@ -222,7 +222,7 @@ struct InventoryView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(panelBackground.opacity(0.78))
+        .background(Color("InventoryPanel").opacity(0.78))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
@@ -243,7 +243,7 @@ struct InventoryView: View {
                        displayName != section.host.displayName {
                         Text(displayName)
                             .font(.caption)
-                            .foregroundStyle(inventoryAccent.opacity(0.92))
+                            .foregroundStyle(Color("InventoryAccent").opacity(0.92))
                     }
                 }
 
@@ -278,7 +278,7 @@ struct InventoryView: View {
                             .font(.footnote.weight(.bold))
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(inventoryAccent)
+                    .tint(Color("InventoryAccent"))
                     .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
                 }
                 .padding(.vertical, -10)
@@ -297,11 +297,11 @@ struct InventoryView: View {
             }
         }
         .padding(20)
-        .background(panelBackground.opacity(0.78))
+        .background(Color("InventoryPanel").opacity(0.78))
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(inventoryAccent)
+                .fill(Color("InventoryAccent"))
                 .frame(width: 5, height: 36)
                 .padding(.leading, 8)
                 .padding(.top, 18)
@@ -338,7 +338,7 @@ struct InventoryView: View {
             }.padding(.vertical, -4)
 
             HStack(spacing: 8) {
-                detailChip(session.provider.uppercased(), tint: inventoryAccent)
+                detailChip(session.provider.uppercased(), tint: Color("InventoryAccent"))
                 detailChip("control \(session.controllerKind)", tint: controllerColor(session.controllerKind))
                 if let attached = session.attachedClientCount, attached > 0 {
                     detailChip("\(attached) attached", tint: .blue.opacity(0.85))
@@ -389,7 +389,7 @@ struct InventoryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(canConnect ? (isConnected ? .gray.opacity(0.7) : inventoryAccent) : .gray.opacity(0.55))
+                .tint(canConnect ? (isConnected ? .gray.opacity(0.7) : Color("InventoryAccent")) : .gray.opacity(0.55))
                 .disabled(section.token == nil || !canConnect)
 
                 Button(role: .destructive) {
@@ -470,7 +470,7 @@ struct InventoryView: View {
     private func statusColor(for session: SessionSummary) -> Color {
         switch session.inventoryStateLabel.lowercased() {
         case "live", "running", "attached", "starting":
-            return inventoryAccent
+            return Color("InventoryAccent")
         case "archived":
             return .orange.opacity(0.92)
         default:
@@ -504,8 +504,8 @@ struct InventoryView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.04, green: 0.05, blue: 0.06),
-                    Color(red: 0.07, green: 0.09, blue: 0.08)
+                    Color("InventoryBackground"),
+                    Color("InventoryBackgroundAlt")
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -513,7 +513,7 @@ struct InventoryView: View {
 
             RadialGradient(
                 colors: [
-                    inventoryAccent.opacity(0.14),
+                    Color("InventoryAccent").opacity(0.14),
                     .clear
                 ],
                 center: .topTrailing,
@@ -523,13 +523,6 @@ struct InventoryView: View {
         }
     }
 
-    private var panelBackground: Color {
-        Color(red: 0.12, green: 0.15, blue: 0.17)
-    }
-
-    private var inventoryAccent: Color {
-        Color(red: 0.74, green: 0.81, blue: 0.54)
-    }
 }
 
 private struct CreateSessionSheet: View {
