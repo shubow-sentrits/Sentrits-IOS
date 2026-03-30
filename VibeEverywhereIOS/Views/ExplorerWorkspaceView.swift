@@ -158,9 +158,55 @@ struct ExplorerWorkspaceView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(sessionViewModel.session.displayTitle)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("ExplorerText"))
+                    
+                    HStack(spacing: 8) {
+                        Text(sessionViewModel.session.displayTitle)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("ExplorerText"))
+                        
+                        Spacer()
+                        
+                        Group{
+                            
+                            Button(role: .destructive) {
+                                Task { await explorerStore.stop(sessionViewModel) }
+                            } label: {
+                                Image(systemName: "stop.fill")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 28, height: 24)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .tint(.red)
+                            .disabled(sessionViewModel.session.isEnded)
+                            .accessibilityLabel("Stop")
+                            
+                            Button {
+                                explorerStore.disconnect(sessionViewModel)
+                            } label: {
+                                Image(systemName: "bolt.slash")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 28, height: 24)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .tint(.gray)
+                            .disabled(sessionViewModel.session.isEnded)
+                            .accessibilityLabel("Disconnect")
+                            
+                            Button {
+                                onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
+                            } label: {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 28, height: 24)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .tint(Color("ExplorerAccent"))
+                        }
+                    }
+                    
                     Text(sessionViewModel.host.displayLabel)
                         .font(.footnote)
                         .foregroundStyle(Color("ExplorerMuted"))
@@ -168,45 +214,6 @@ struct ExplorerWorkspaceView: View {
                         .font(.footnote)
                         .foregroundStyle(Color("ExplorerMuted"))
                         .lineLimit(1)
-                }
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Button(role: .destructive) {
-                        Task { await explorerStore.stop(sessionViewModel) }
-                    } label: {
-                        Image(systemName: "stop.fill")
-                            .font(.caption.weight(.bold))
-                            .frame(width: 30, height: 28)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .tint(.red)
-                    .disabled(sessionViewModel.session.isEnded)
-                    .accessibilityLabel("Stop")
-
-                    Button {
-                        explorerStore.disconnect(sessionViewModel)
-                    } label: {
-                        Image(systemName: "bolt.slash")
-                            .font(.caption.weight(.bold))
-                            .frame(width: 30, height: 28)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .tint(.gray)
-                    .disabled(sessionViewModel.session.isEnded)
-                    .accessibilityLabel("Disconnect")
-
-                    Button {
-                        onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
-                    } label: {
-                        Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
-                            .font(.footnote.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color("ExplorerAccent"))
                 }
             }
 
@@ -218,6 +225,7 @@ struct ExplorerWorkspaceView: View {
                 onResize: { _ in }
             )
             .frame(height: 218)
+            .padding(.horizontal, -10)
 
             HStack(spacing: 8) {
                 explorerTag(normalizedBadgeLabel(sessionViewModel.session.status), tone: sessionTone(for: sessionViewModel.session.status))
@@ -262,11 +270,12 @@ struct ExplorerWorkspaceView: View {
                                 } label: {
                                     HStack(spacing: 6) {
                                         Text("#\(tag)")
+                                            .dynamicBadgeFont(weight: .medium)
                                         Image(systemName: "minus.circle.fill")
                                             .font(.caption2)
                                     }
-                                    .font(.caption.weight(.medium))
-                                    .padding(.horizontal, 9)
+                                    .frame(width: 60)
+                                    .padding(.horizontal, 8)
                                     .padding(.vertical, 6)
                                     .background(Color("ExplorerPanelSoft"))
                                     .foregroundStyle(Color("ExplorerText"))
@@ -336,9 +345,10 @@ struct ExplorerWorkspaceView: View {
 
     private func explorerTag(_ text: String, tone: Color) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .dynamicBadgeFont()
             .foregroundStyle(tone)
-            .padding(.horizontal, 10)
+            .frame(width: 40)
+            .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(tone.opacity(0.18))
             .clipShape(Capsule())
@@ -390,6 +400,24 @@ struct ExplorerWorkspaceView: View {
         default:
             return .orange
         }
+    }
+}
+
+private struct DynamicBadgeFontModifier: ViewModifier {
+    let weight: Font.Weight
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 100, weight: weight, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.01)
+            .allowsTightening(true)
+    }
+}
+
+private extension View {
+    func dynamicBadgeFont(weight: Font.Weight = .semibold) -> some View {
+        modifier(DynamicBadgeFontModifier(weight: weight))
     }
 }
 
