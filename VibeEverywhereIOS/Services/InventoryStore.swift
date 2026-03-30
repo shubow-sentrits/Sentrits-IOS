@@ -1,4 +1,23 @@
 import Foundation
+import UserNotifications
+
+enum InventoryNotificationEvent: String, CaseIterable {
+    case becameQuiet
+    case stopped
+
+    var title: String {
+        switch self {
+        case .becameQuiet: return "Session became quiet"
+        case .stopped: return "Session stopped"
+        }
+    }
+}
+
+private struct InventorySessionNotificationTransition {
+    let event: InventoryNotificationEvent
+    let host: SavedHost
+    let session: SessionSummary
+}
 
 struct CreateSessionInput: Equatable {
     var title: String = ""
@@ -60,10 +79,12 @@ final class InventoryStore: ObservableObject {
 
     private let hostsStore: HostsStore
     private let tokenStore: TokenStore
+    private let notificationPreferences: NotificationPreferencesStore
 
-    init(hostsStore: HostsStore, tokenStore: TokenStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore, notificationPreferences: NotificationPreferencesStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
+        self.notificationPreferences = notificationPreferences
     }
 
     func refresh() async {
@@ -110,10 +131,13 @@ final class InventoryStore: ObservableObject {
             }
         }
 
-        sections = nextSections.sorted {
+        let sortedSections = nextSections.sorted {
             $0.host.displayLabel.localizedCaseInsensitiveCompare($1.host.displayLabel) == .orderedAscending
         }
+        let transitions = notificationTransitions(from: sections, to: sortedSections)
+        sections = sortedSections
         errorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n")
+        await deliverNotifications(for: transitions)
     }
 
     func visibleSessions(for section: InventoryDeviceSection) -> [SessionSummary] {
@@ -225,7 +249,7 @@ enum InventoryStoreError: LocalizedError {
 
 extension InventoryStore {
     static func previewStore(hostsStore: HostsStore, tokenStore: TokenStore) -> InventoryStore {
-        let store = InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore)
+        let store = InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore, notificationPreferences: NotificationPreferencesStore())
         store.sections = [
             InventoryDeviceSection(
                 host: PreviewFixtures.hostA,
@@ -244,5 +268,61 @@ extension InventoryStore {
         ]
         store.showStoppedSessions = true
         return store
+    }
+}
+
+private extension InventoryStore {
+    func notificationTransitions(from previous: [InventoryDeviceSection], to next: [InventoryDeviceSection]) -> [InventorySessionNotificationTransition] {
+        let previousSessions = Dictionary(uniqueKeysWithValues: previous.flatMap { section in
+            section.sessions.map { ($0.notificationKey(hostID: section.host.id), $0) }
+        })
+
+        return next.flatMap { section in
+            section.sessions.compactMap { session in
+                let sessionKey = session.notificationKey(hostID: section.host.id)
+                guard let prior = previousSessions[sessionKey] else { return nil }
+
+                if prior.isNotificationActive,
+                   session.isNotificationQuiet,
+                   notificationPreferences.shouldNotify(for: .becameQuiet, sessionKey: sessionKey) {
+                    return InventorySessionNotificationTransition(event: .becameQuiet, host: section.host, session: session)
+                }
+
+                if !prior.isEnded,
+                   session.isEnded,
+                   notificationPreferences.shouldNotify(for: .stopped, sessionKey: sessionKey) {
+                    return InventorySessionNotificationTransition(event: .stopped, host: section.host, session: session)
+                }
+
+                return nil
+            }
+        }
+    }
+
+    func deliverNotifications(for transitions: [InventorySessionNotificationTransition]) async {
+        guard !transitions.isEmpty else { return }
+        await notificationPreferences.requestAuthorizationIfNeeded()
+        guard notificationPreferences.authorizationStatus == .authorized ||
+                notificationPreferences.authorizationStatus == .provisional else { return }
+
+        let center = UNUserNotificationCenter.current()
+        for transition in transitions {
+            let content = UNMutableNotificationContent()
+            content.title = transition.event.title
+            switch transition.event {
+            case .becameQuiet:
+                content.body = "\(transition.session.displayTitle) on \(transition.host.displayLabel) is now quiet."
+            case .stopped:
+                content.body = "\(transition.session.displayTitle) on \(transition.host.displayLabel) has stopped."
+            }
+            content.sound = .default
+
+            let request = UNNotificationRequest(
+                identifier: "session-\(transition.session.notificationKey(hostID: transition.host.id))-\(transition.event.rawValue)",
+                content: content,
+                trigger: nil
+            )
+            try? await center.add(request)
+        }
     }
 }

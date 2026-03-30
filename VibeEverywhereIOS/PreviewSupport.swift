@@ -215,6 +215,7 @@ struct PreviewAppContext {
     let tokenStore: PreviewTokenStore
     let hostsStore: HostsStore
     let activityStore: ActivityLogStore
+    let notificationPreferences: NotificationPreferencesStore
     let inventoryStore: InventoryStore
     let explorerStore: ExplorerWorkspaceStore
     let focusedSessionViewModel: SessionViewModel
@@ -226,6 +227,7 @@ struct PreviewAppContext {
         ])
         let hostsStore = HostsStore.previewStore(tokenStore: tokenStore)
         let activityStore = ActivityLogStore(seed: PreviewFixtures.activitySeed)
+        let notificationPreferences = NotificationPreferencesStore()
         let inventoryStore = InventoryStore.previewStore(hostsStore: hostsStore, tokenStore: tokenStore)
         let explorerStore = ExplorerWorkspaceStore.previewStore(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
         let focusedSessionViewModel = explorerStore.sessions.first ?? SessionViewModel(host: PreviewFixtures.hostA, token: "preview-token-alpha", session: PreviewFixtures.sessionA, activityStore: activityStore)
@@ -241,6 +243,7 @@ struct PreviewAppContext {
             tokenStore: tokenStore,
             hostsStore: hostsStore,
             activityStore: activityStore,
+            notificationPreferences: notificationPreferences,
             inventoryStore: inventoryStore,
             explorerStore: explorerStore,
             focusedSessionViewModel: focusedSessionViewModel

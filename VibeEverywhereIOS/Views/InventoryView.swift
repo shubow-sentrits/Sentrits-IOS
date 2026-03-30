@@ -5,6 +5,7 @@ struct InventoryView: View {
     let tokenStore: TokenStore
     @ObservedObject var activityStore: ActivityLogStore
     @ObservedObject var explorerStore: ExplorerWorkspaceStore
+    let notificationPreferences: NotificationPreferencesStore
     let onOpenExplorer: () -> Void
 
     @StateObject private var store: InventoryStore
@@ -18,6 +19,7 @@ struct InventoryView: View {
         tokenStore: TokenStore,
         activityStore: ActivityLogStore,
         explorerStore: ExplorerWorkspaceStore,
+        notificationPreferences: NotificationPreferencesStore,
         onOpenExplorer: @escaping () -> Void,
         previewStore: InventoryStore? = nil,
         autoRefreshOnAppear: Bool = true
@@ -26,8 +28,9 @@ struct InventoryView: View {
         self.tokenStore = tokenStore
         self.activityStore = activityStore
         self.explorerStore = explorerStore
+        self.notificationPreferences = notificationPreferences
         self.onOpenExplorer = onOpenExplorer
-        _store = StateObject(wrappedValue: previewStore ?? InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore))
+        _store = StateObject(wrappedValue: previewStore ?? InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore, notificationPreferences: notificationPreferences))
         self.autoRefreshOnAppear = autoRefreshOnAppear
     }
 
@@ -52,6 +55,14 @@ struct InventoryView: View {
                 .task {
                     guard autoRefreshOnAppear else { return }
                     await store.refresh()
+                }
+                .task {
+                    guard autoRefreshOnAppear else { return }
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(15))
+                        guard !Task.isCancelled else { return }
+                        await store.refresh()
+                    }
                 }
                 .refreshable {
                     await store.refresh()
@@ -331,6 +342,7 @@ struct InventoryView: View {
 
                 VStack(alignment: .trailing, spacing: 8) {
                     statusBadge(session.inventoryStateLabel, color: statusColor(for: session))
+                    statusBadge(session.supervisionStateLabel, color: supervisionColor(for: session))
                     if let attention = session.attentionState, attention != "none" {
                         statusBadge(attention, color: attentionColor(for: session))
                     }
@@ -339,6 +351,17 @@ struct InventoryView: View {
 
             HStack(spacing: 8) {
                 detailChip(session.provider.uppercased(), tint: Color("InventoryAccent"))
+                Button {
+                    notificationPreferences.toggleSubscription(sessionKey: session.notificationKey(hostID: section.host.id))
+                } label: {
+                    Image(systemName: notificationPreferences.isSubscribed(sessionKey: session.notificationKey(hostID: section.host.id)) ? "bell.fill" : "bell.slash")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(notificationPreferences.isSubscribed(sessionKey: session.notificationKey(hostID: section.host.id)) ? Color("InventoryAccent") : Color.white.opacity(0.55))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Capsule())
+                }
                 detailChip("control \(session.controllerKind)", tint: controllerColor(session.controllerKind))
                 if let attached = session.attachedClientCount, attached > 0 {
                     detailChip("\(attached) attached", tint: .blue.opacity(0.85))
@@ -489,6 +512,17 @@ struct InventoryView: View {
         }
     }
 
+    private func supervisionColor(for session: SessionSummary) -> Color {
+        switch session.supervisionStateLabel.lowercased() {
+        case "active":
+            return .green.opacity(0.92)
+        case "stopped":
+            return .gray.opacity(0.82)
+        default:
+            return .orange.opacity(0.9)
+        }
+    }
+
     private func controllerColor(_ kind: String) -> Color {
         switch kind.lowercased() {
         case "remote":
@@ -589,6 +623,7 @@ private struct CreateSessionSheet: View {
             tokenStore: context.tokenStore,
             activityStore: context.activityStore,
             explorerStore: context.explorerStore,
+            notificationPreferences: context.notificationPreferences,
             onOpenExplorer: {},
             previewStore: context.inventoryStore,
             autoRefreshOnAppear: false

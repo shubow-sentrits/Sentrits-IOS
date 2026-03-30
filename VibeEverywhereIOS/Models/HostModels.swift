@@ -378,6 +378,13 @@ struct SessionSummary: Codable, Identifiable, Hashable {
         return status
     }
 
+    var supervisionStateLabel: String {
+        if let supervisionState, !supervisionState.isEmpty {
+            return supervisionState
+        }
+        return isEnded ? "stopped" : "quiet"
+    }
+
     var isEnded: Bool {
         switch (inventoryState ?? status).lowercased() {
         case "ended", "exited", "stopped", "archived", "error":
@@ -395,6 +402,19 @@ struct SessionSummary: Codable, Identifiable, Hashable {
             return isActive
         }
         return isExplorerEligible
+    }
+
+
+    var isNotificationActive: Bool {
+        supervisionStateLabel.lowercased() == "active"
+    }
+
+    var isNotificationQuiet: Bool {
+        supervisionStateLabel.lowercased() == "quiet"
+    }
+
+    func notificationKey(hostID: UUID) -> String {
+        "\(hostID.uuidString):\(sessionId)"
     }
 
     var normalizedGroupTags: [String] {

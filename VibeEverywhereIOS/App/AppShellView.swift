@@ -1,4 +1,75 @@
 import SwiftUI
+import UserNotifications
+
+@MainActor
+final class NotificationPreferencesStore: ObservableObject {
+    @Published var quietEnabled: Bool
+    @Published var stoppedEnabled: Bool
+    @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+
+    private let defaults: UserDefaults
+    private let quietKey = "notifications.event.quiet"
+    private let stoppedKey = "notifications.event.stopped"
+    private let sessionsKey = "notifications.sessions"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? true
+        self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? true
+        Task { await refreshAuthorizationStatus() }
+    }
+
+    func refreshAuthorizationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        authorizationStatus = settings.authorizationStatus
+    }
+
+    func requestAuthorizationIfNeeded() async {
+        let center = UNUserNotificationCenter.current()
+        if authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        }
+        await refreshAuthorizationStatus()
+    }
+
+    func setQuietEnabled(_ value: Bool) {
+        quietEnabled = value
+        defaults.set(value, forKey: quietKey)
+    }
+
+    func setStoppedEnabled(_ value: Bool) {
+        stoppedEnabled = value
+        defaults.set(value, forKey: stoppedKey)
+    }
+
+    func isSubscribed(sessionKey: String) -> Bool {
+        subscribedSessionKeys.contains(sessionKey)
+    }
+
+    func toggleSubscription(sessionKey: String) {
+        var keys = subscribedSessionKeys
+        if keys.contains(sessionKey) {
+            keys.remove(sessionKey)
+        } else {
+            keys.insert(sessionKey)
+        }
+        defaults.set(Array(keys).sorted(), forKey: sessionsKey)
+        objectWillChange.send()
+    }
+
+    func shouldNotify(for event: InventoryNotificationEvent, sessionKey: String) -> Bool {
+        guard isSubscribed(sessionKey: sessionKey) else { return false }
+        switch event {
+        case .becameQuiet: return quietEnabled
+        case .stopped: return stoppedEnabled
+        }
+    }
+
+    private var subscribedSessionKeys: Set<String> {
+        Set(defaults.stringArray(forKey: sessionsKey) ?? [])
+    }
+}
+
 
 struct AppShellView: View {
     @ObservedObject var hostsStore: HostsStore
@@ -9,11 +80,13 @@ struct AppShellView: View {
     @State private var focusedSessionID: String?
     @State private var focusedHostID: UUID?
     @StateObject private var explorerStore: ExplorerWorkspaceStore
+    @ObservedObject var notificationPreferences: NotificationPreferencesStore
 
-    init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore, notificationPreferences: NotificationPreferencesStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
         self.activityStore = activityStore
+        self.notificationPreferences = notificationPreferences
         _explorerStore = StateObject(
             wrappedValue: ExplorerWorkspaceStore(
                 hostsStore: hostsStore,
@@ -39,6 +112,7 @@ struct AppShellView: View {
                     tokenStore: tokenStore,
                     activityStore: activityStore,
                     explorerStore: explorerStore,
+                    notificationPreferences: notificationPreferences,
                     onOpenExplorer: { selectedTab = 2 }
                 )
             }
@@ -68,6 +142,14 @@ struct AppShellView: View {
             .tabItem {
                 Label("Activity", systemImage: "clock.arrow.circlepath")
             }
+
+            NavigationStack {
+                NotificationConfigView(notificationPreferences: notificationPreferences)
+            }
+            .tag(4)
+            .tabItem {
+                Label("Config", systemImage: "bell.badge")
+            }
         }
         .tint(Color("AppTint"))
         .fullScreenCover(isPresented: Binding(
@@ -76,10 +158,16 @@ struct AppShellView: View {
         )) {
             if let viewModel = focusedSessionViewModel {
                 NavigationStack {
-                    SessionDetailView(viewModel: viewModel) {
-                        explorerStore.disconnect(viewModel)
-                        clearFocusedSession()
-                    }
+                    SessionDetailView(
+                        viewModel: viewModel,
+                        onClose: {
+                            clearFocusedSession()
+                        },
+                        onSessionEnded: {
+                            explorerStore.disconnect(viewModel)
+                            clearFocusedSession()
+                        }
+                    )
                 }
             }
         }
@@ -180,9 +268,53 @@ final class ExplorerWorkspaceStore: ObservableObject {
     }
 
     func stop(_ viewModel: SessionViewModel) async {
-        await viewModel.stopSession()
-        if viewModel.session.isEnded {
+        do {
+            let client = HostClient(host: viewModel.host)
+            try await client.stopSession(
+                sessionId: viewModel.session.sessionId,
+                host: viewModel.host,
+                token: viewModel.token
+            )
+            viewModel.updateSession(
+                SessionSummary(
+                    sessionId: viewModel.session.sessionId,
+                    provider: viewModel.session.provider,
+                    workspaceRoot: viewModel.session.workspaceRoot,
+                    title: viewModel.session.title,
+                    status: "Exited",
+                    conversationId: viewModel.session.conversationId,
+                    groupTags: viewModel.session.groupTags,
+                    controllerKind: viewModel.session.controllerKind,
+                    controllerClientId: viewModel.session.controllerClientId,
+                    isRecovered: viewModel.session.isRecovered,
+                    archivedRecord: viewModel.session.archivedRecord,
+                    isActive: false,
+                    inventoryState: "archived",
+                    activityState: viewModel.session.activityState,
+                    supervisionState: "stopped",
+                    attentionState: viewModel.session.attentionState,
+                    attentionReason: viewModel.session.attentionReason,
+                    createdAtUnixMs: viewModel.session.createdAtUnixMs,
+                    lastStatusAtUnixMs: viewModel.session.lastStatusAtUnixMs,
+                    lastOutputAtUnixMs: viewModel.session.lastOutputAtUnixMs,
+                    lastActivityAtUnixMs: viewModel.session.lastActivityAtUnixMs,
+                    lastFileChangeAtUnixMs: viewModel.session.lastFileChangeAtUnixMs,
+                    lastGitChangeAtUnixMs: viewModel.session.lastGitChangeAtUnixMs,
+                    lastControllerChangeAtUnixMs: viewModel.session.lastControllerChangeAtUnixMs,
+                    attentionSinceUnixMs: viewModel.session.attentionSinceUnixMs,
+                    currentSequence: viewModel.session.currentSequence,
+                    attachedClientCount: viewModel.session.attachedClientCount,
+                    recentFileChangeCount: viewModel.session.recentFileChangeCount,
+                    gitDirty: viewModel.session.gitDirty,
+                    gitBranch: viewModel.session.gitBranch,
+                    gitModifiedCount: viewModel.session.gitModifiedCount,
+                    gitStagedCount: viewModel.session.gitStagedCount,
+                    gitUntrackedCount: viewModel.session.gitUntrackedCount
+                )
+            )
             disconnect(viewModel)
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -315,6 +447,109 @@ extension ExplorerWorkspaceStore {
     AppShellView(
         hostsStore: context.hostsStore,
         tokenStore: context.tokenStore,
-        activityStore: context.activityStore
+        activityStore: context.activityStore,
+        notificationPreferences: context.notificationPreferences
     )
+}
+
+private struct NotificationConfigView: View {
+    @ObservedObject var notificationPreferences: NotificationPreferencesStore
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color("ActivityBackground"), Color("ActivityBackgroundAlt")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Config")
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.white.opacity(0.94))
+                            Text("Choose which subscribed session events can notify this device.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.white.opacity(0.62))
+                        }
+                        Spacer()
+                    }
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Permission")
+                                    .font(.headline)
+                                    .foregroundStyle(Color.white.opacity(0.92))
+                                Text(permissionDescription)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.white.opacity(0.64))
+                            }
+                            Spacer()
+                            Button(authorizationButtonTitle) {
+                                Task { await notificationPreferences.requestAuthorizationIfNeeded() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color("AppTint"))
+                            .disabled(notificationPreferences.authorizationStatus == .authorized || notificationPreferences.authorizationStatus == .provisional)
+                        }
+
+                        Toggle(isOn: Binding(get: { notificationPreferences.quietEnabled }, set: { notificationPreferences.setQuietEnabled($0) })) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Session became quiet")
+                                    .font(.headline)
+                                    .foregroundStyle(Color.white.opacity(0.9))
+                                Text("Notify when a subscribed session transitions from active to quiet.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.white.opacity(0.6))
+                            }
+                        }
+                        .tint(Color("AppTint"))
+
+                        Toggle(isOn: Binding(get: { notificationPreferences.stoppedEnabled }, set: { notificationPreferences.setStoppedEnabled($0) })) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Session stopped")
+                                    .font(.headline)
+                                    .foregroundStyle(Color.white.opacity(0.9))
+                                Text("Notify when a subscribed session exits or errors.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.white.opacity(0.6))
+                            }
+                        }
+                        .tint(Color("AppTint"))
+                    }
+                    .padding(18)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 120)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .task {
+            await notificationPreferences.refreshAuthorizationStatus()
+        }
+    }
+
+    private var authorizationButtonTitle: String {
+        switch notificationPreferences.authorizationStatus {
+        case .authorized, .provisional: return "Enabled"
+        case .denied: return "Denied"
+        default: return "Allow"
+        }
+    }
+
+    private var permissionDescription: String {
+        switch notificationPreferences.authorizationStatus {
+        case .authorized, .provisional: return "System notifications are enabled for Sentrits."
+        case .denied: return "Notifications are denied in system settings."
+        default: return "Allow notifications to receive quiet and stopped session alerts."
+        }
+    }
 }

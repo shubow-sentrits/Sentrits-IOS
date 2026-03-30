@@ -213,6 +213,7 @@ struct SessionsView: View {
 
             HStack(spacing: 8) {
                 explorerPill(sessionViewModel.session.status, tone: sessionTone(for: sessionViewModel.session.status))
+                explorerPill(sessionViewModel.session.supervisionStateLabel, tone: supervisionTone(for: sessionViewModel.session))
                 explorerPill(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
                 explorerPill(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
@@ -373,6 +374,17 @@ struct SessionsView: View {
             return Color.orange
         case .idle, .disconnected:
             return Color.gray
+        }
+    }
+
+    private func supervisionTone(for session: SessionSummary) -> Color {
+        switch session.supervisionStateLabel.lowercased() {
+        case "active":
+            return Color.green
+        case "stopped":
+            return Color.gray
+        default:
+            return Color.orange
         }
     }
 

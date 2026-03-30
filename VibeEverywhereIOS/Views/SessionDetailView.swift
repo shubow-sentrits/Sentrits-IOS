@@ -3,14 +3,23 @@ import SwiftUI
 struct SessionDetailView: View {
     @ObservedObject var viewModel: SessionViewModel
     let autoActivate: Bool
+    let onClose: (() -> Void)?
     let onSessionEnded: (() -> Void)?
     @State private var isContextPanelPresented = false
+    @State private var isPromptEditorPresented = false
     @State private var keyPageIndex = 0
+    @State private var promptEditorDragOffset: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: SessionViewModel, autoActivate: Bool = true, onSessionEnded: (() -> Void)? = nil) {
+    init(
+        viewModel: SessionViewModel,
+        autoActivate: Bool = true,
+        onClose: (() -> Void)? = nil,
+        onSessionEnded: (() -> Void)? = nil
+    ) {
         self.viewModel = viewModel
         self.autoActivate = autoActivate
+        self.onClose = onClose
         self.onSessionEnded = onSessionEnded
     }
 
@@ -58,6 +67,39 @@ struct SessionDetailView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                     .zIndex(2)
             }
+
+            if isPromptEditorPresented {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        closePromptEditor()
+                    }
+                    .zIndex(3)
+
+                promptEditorPanel
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 12)
+                    .offset(y: promptEditorDragOffset)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                guard value.translation.height > 0 else { return }
+                                promptEditorDragOffset = value.translation.height
+                            }
+                            .onEnded { value in
+                                if value.translation.height > 120 {
+                                    closePromptEditor()
+                                } else {
+                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                        promptEditorDragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(4)
+            }
         }
         .navigationTitle(viewModel.session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -75,7 +117,7 @@ struct SessionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
-                    onSessionEnded?()
+                    onClose?()
                     dismiss()
                 } label: {
                     Label("Back", systemImage: "chevron.backward")
@@ -105,9 +147,10 @@ struct SessionDetailView: View {
     private var headerBar: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                compactStatusBadge(viewModel.session.status, tone: sessionStatusColor(viewModel.session.status))
-                compactStatusBadge(socketLabel(viewModel.socketState), tone: socketColor(viewModel.socketState))
-                compactStatusBadge(viewModel.session.controllerKind.capitalized, tone: viewModel.canSendInput ? .green : .orange)
+                compactStatusBadge(normalizedBadgeLabel(viewModel.session.status), tone: sessionStatusColor(viewModel.session.status))
+                compactStatusBadge(normalizedBadgeLabel(viewModel.session.supervisionStateLabel), tone: supervisionColor(viewModel.session))
+                compactStatusBadge(normalizedBadgeLabel(socketLabel(viewModel.socketState)), tone: socketColor(viewModel.socketState))
+                compactStatusBadge(normalizedBadgeLabel(viewModel.session.controllerKind), tone: viewModel.canSendInput ? .green : .orange)
 
                 Spacer(minLength: 8)
 
@@ -218,43 +261,49 @@ struct SessionDetailView: View {
     }
 
     private var inputBar: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .top, spacing: 10) {
-                directionalKeyCluster
-                    .frame(width: 118, height: 76)
-
-                pageIndicator
-                    .frame(width: 12, height: 76)
-
-                verticalKeyPager
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 76)
-            }
-            .padding(.top, -10)
-
-            HStack(spacing: 10) {
-                TextField(
-                    viewModel.canSendInput ? "Enter terminal command" : "Request control to send commands",
-                    text: $viewModel.inputText
-                )
-                .textFieldStyle(.plain)
-                .lineLimit(1)
-                .padding(.horizontal, 14)
-                .frame(height: 46)
-                .background(Color("FocusedPanelSoft").opacity(0.92))
-                .foregroundStyle(viewModel.canSendInput ? Color("FocusedText") : Color("FocusedMuted"))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .disabled(!viewModel.canSendInput)
-
-                Button("Send") {
-                    Task { await viewModel.sendInput() }
+        HStack(alignment: .center, spacing: 5) {
+            
+            directionalKeyCluster
+            .frame(width: 140, height: 76)
+            
+            VStack(){
+                HStack(alignment: .top, spacing: 10) {
+                    
+                    pageIndicator
+                        .frame(width: 12, height: 76)
+                    
+                    verticalKeyPager
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 76)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color("FocusedAccent"))
-                .frame(height: 46)
-                .disabled(!viewModel.canSendInput || viewModel.inputText.isEmpty)
+                .padding(.top, -10)
+
+                Button {
+                    guard viewModel.canSendInput else { return }
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                        isPromptEditorPresented = true
+                        promptEditorDragOffset = 0
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Prompt Editor")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(viewModel.canSendInput ? "Compose multiline prompt" : "Request control to compose")
+                            .font(.caption)
+                            .foregroundStyle(Color("FocusedMuted"))
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(height: 46)
+                    .background(Color("FocusedPanelSoft").opacity(0.92))
+                    .foregroundStyle(viewModel.canSendInput ? Color("FocusedText") : Color("FocusedMuted"))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(!viewModel.canSendInput)
             }
-            .frame(height: 46)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -298,7 +347,7 @@ struct SessionDetailView: View {
     }
 
     private var directionalKeyCluster: some View {
-        let columns = Array(repeating: GridItem(.fixed(34), spacing: 10), count: 3)
+        let columns = Array(repeating: GridItem(.fixed(34), spacing: 15), count: 3)
         return LazyVGrid(columns: columns, spacing: 12) {
             ForEach(directionalKeys, id: \.label) { key in
                 Button {
@@ -306,9 +355,9 @@ struct SessionDetailView: View {
                 } label: {
                     Image(systemName: key.systemImage)
                         .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 16, height: 15)
+                        .frame(width: 16, height: 30)
                 }
-                .frame(height: 24)
+                .frame(height: 40)
                 .buttonStyle(.bordered)
                 .tint(Color("FocusedControlKey"))
                 .disabled(!viewModel.canSendInput)
@@ -363,6 +412,84 @@ struct SessionDetailView: View {
         }
 
         Task { await viewModel.sendTerminalInput(key.payload) }
+    }
+
+    private var promptEditorPanel: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Prompt Editor")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color("FocusedText"))
+                    Text("Compose multiline input, then send it to the terminal.")
+                        .font(.footnote)
+                        .foregroundStyle(Color("FocusedMuted"))
+                }
+
+                Spacer()
+
+                Button {
+                    closePromptEditor()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color("FocusedMuted"))
+                        .frame(width: 28, height: 28)
+                        .background(Color("FocusedPanelSoft").opacity(0.9))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            TextEditor(text: $viewModel.inputText)
+                .scrollContentBackground(.hidden)
+                .padding(12)
+                .frame(minHeight: 220, maxHeight: 280)
+                .background(Color("FocusedPanelSoft").opacity(0.92))
+                .foregroundStyle(Color("FocusedText"))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            HStack(spacing: 10) {
+                Button("Clear") {
+                    viewModel.inputText = ""
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("FocusedAccent"))
+
+                Button("Close") {
+                    closePromptEditor()
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("FocusedMuted"))
+
+                Button("Send") {
+                    Task {
+                        await viewModel.sendInput()
+                        closePromptEditor()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color("FocusedAccent"))
+                .disabled(!viewModel.canSendInput || viewModel.inputText.isEmpty)
+            }
+        }
+        .padding(18)
+        .background(.ultraThinMaterial)
+        .background(Color("FocusedPanel").opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 22, x: 0, y: 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+
+    private func closePromptEditor() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            isPromptEditorPresented = false
+            promptEditorDragOffset = 0
+        }
     }
 
     private var contextPanel: some View {
@@ -506,6 +633,17 @@ struct SessionDetailView: View {
         }
     }
 
+    private func supervisionColor(_ session: SessionSummary) -> Color {
+        switch session.supervisionStateLabel.lowercased() {
+        case "active":
+            return .green
+        case "stopped":
+            return .gray
+        default:
+            return .orange
+        }
+    }
+
     private func compactStatusBadge(_ text: String, tone: Color) -> some View {
         Text(text)
             .font(.caption.weight(.semibold))
@@ -515,6 +653,13 @@ struct SessionDetailView: View {
             .frame(height: 28)
             .background(tone.opacity(0.18))
             .clipShape(Capsule())
+    }
+
+    private func normalizedBadgeLabel(_ text: String) -> String {
+        if text.lowercased() == text {
+            return text.capitalized
+        }
+        return text
     }
 
     private var directionalKeys: [TerminalControlKey] {
@@ -572,7 +717,7 @@ private struct FocusedLayoutMetrics {
     let verticalSpacing: CGFloat = 10
     let headerHeight: CGFloat = 58
     let modeBarHeight: CGFloat = 68
-    let inputBarHeight: CGFloat = 126
+    let inputBarHeight: CGFloat = 118
 }
 
 private struct TerminalControlKey {

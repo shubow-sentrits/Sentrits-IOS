@@ -172,14 +172,42 @@ struct ExplorerWorkspaceView: View {
 
                 Spacer()
 
-                Button {
-                    onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
-                } label: {
-                    Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
-                        .font(.footnote.weight(.semibold))
+                HStack(spacing: 8) {
+                    Button(role: .destructive) {
+                        Task { await explorerStore.stop(sessionViewModel) }
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.caption.weight(.bold))
+                            .frame(width: 30, height: 28)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.red)
+                    .disabled(sessionViewModel.session.isEnded)
+                    .accessibilityLabel("Stop")
+
+                    Button {
+                        explorerStore.disconnect(sessionViewModel)
+                    } label: {
+                        Image(systemName: "bolt.slash")
+                            .font(.caption.weight(.bold))
+                            .frame(width: 30, height: 28)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.gray)
+                    .disabled(sessionViewModel.session.isEnded)
+                    .accessibilityLabel("Disconnect")
+
+                    Button {
+                        onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
+                    } label: {
+                        Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color("ExplorerAccent"))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color("ExplorerAccent"))
             }
 
             TerminalTextView(
@@ -192,51 +220,13 @@ struct ExplorerWorkspaceView: View {
             .frame(height: 218)
 
             HStack(spacing: 8) {
-                explorerTag(sessionViewModel.session.status, tone: sessionTone(for: sessionViewModel.session.status))
-                explorerTag(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
-                explorerTag(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
+                explorerTag(normalizedBadgeLabel(sessionViewModel.session.status), tone: sessionTone(for: sessionViewModel.session.status))
+                explorerTag(normalizedBadgeLabel(sessionViewModel.session.supervisionStateLabel), tone: supervisionTone(for: sessionViewModel.session))
+                explorerTag(normalizedBadgeLabel(socketText(for: sessionViewModel.socketState)), tone: socketTone(for: sessionViewModel.socketState))
+                explorerTag(normalizedBadgeLabel(sessionViewModel.session.controllerKind), tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
                     explorerTag(branch, tone: Color("ExplorerAccent").opacity(0.8))
                 }
-            }
-
-            HStack(spacing: 8) {
-                Button {
-                    onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
-                } label: {
-                    Label("Focus", systemImage: "arrow.up.left.and.arrow.down.right")
-                        .font(.caption.weight(.bold))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color("ExplorerAccent"))
-                .controlSize(.small)
-
-                Button(sessionViewModel.canSendInput ? "Release" : "Request Control") {
-                    Task {
-                        if sessionViewModel.canSendInput {
-                            await sessionViewModel.releaseControl()
-                        } else {
-                            await sessionViewModel.requestControl()
-                        }
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color("ExplorerHighlight"))
-                .controlSize(.small)
-
-                Spacer()
-
-                Button("Stop", role: .destructive) {
-                    Task { await explorerStore.stop(sessionViewModel) }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-
-                Button("Disconnect") {
-                    explorerStore.disconnect(sessionViewModel)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
 
             HStack(spacing: 8) {
@@ -354,6 +344,13 @@ struct ExplorerWorkspaceView: View {
             .clipShape(Capsule())
     }
 
+    private func normalizedBadgeLabel(_ text: String) -> String {
+        if text.lowercased() == text {
+            return text.capitalized
+        }
+        return text
+    }
+
     private func sessionTone(for status: String) -> Color {
         switch status.lowercased() {
         case "running", "attached", "starting", "awaitinginput":
@@ -381,6 +378,17 @@ struct ExplorerWorkspaceView: View {
         case .connected: return .green
         case .connecting: return .orange
         case .idle, .disconnected: return .gray
+        }
+    }
+
+    private func supervisionTone(for session: SessionSummary) -> Color {
+        switch session.supervisionStateLabel.lowercased() {
+        case "active":
+            return .green
+        case "stopped":
+            return .gray
+        default:
+            return .orange
         }
     }
 }
