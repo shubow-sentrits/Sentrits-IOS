@@ -20,7 +20,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>CFBundleDisplayName</key>
+	<string>Sentrits</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>VibeEverywhere connects to your LAN host to pair with vibe-hostd, list sessions, and attach to terminals.</string>
+	<string>Sentrits connects to your LAN host to pair with vibe-hostd, list sessions, and attach to terminals.</string>
 </dict>
 </plist>
