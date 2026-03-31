@@ -127,7 +127,8 @@ struct AppShellView: View {
             wrappedValue: InventoryStore(
                 hostsStore: hostsStore,
                 tokenStore: tokenStore,
-                notificationPreferences: notificationPreferences
+                notificationPreferences: notificationPreferences,
+                activityStore: activityStore
             )
         )
     }

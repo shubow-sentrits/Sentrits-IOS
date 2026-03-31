@@ -80,11 +80,14 @@ final class InventoryStore: ObservableObject {
     private let hostsStore: HostsStore
     private let tokenStore: TokenStore
     private let notificationPreferences: NotificationPreferencesStore
+    private let activityStore: ActivityLogStore
+    private var lastRefreshAtUnixMs: Int64?
 
-    init(hostsStore: HostsStore, tokenStore: TokenStore, notificationPreferences: NotificationPreferencesStore) {
+    init(hostsStore: HostsStore, tokenStore: TokenStore, notificationPreferences: NotificationPreferencesStore, activityStore: ActivityLogStore) {
         self.hostsStore = hostsStore
         self.tokenStore = tokenStore
         self.notificationPreferences = notificationPreferences
+        self.activityStore = activityStore
     }
 
     func refresh() async {
@@ -134,8 +137,11 @@ final class InventoryStore: ObservableObject {
         let sortedSections = nextSections.sorted {
             $0.host.displayLabel.localizedCaseInsensitiveCompare($1.host.displayLabel) == .orderedAscending
         }
-        let transitions = notificationTransitions(from: sections, to: sortedSections)
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let previousRefreshAt = lastRefreshAtUnixMs
+        let transitions = notificationTransitions(from: sections, to: sortedSections, previousRefreshAtUnixMs: previousRefreshAt, currentRefreshAtUnixMs: now)
         sections = sortedSections
+        lastRefreshAtUnixMs = now
         errorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n")
         await deliverNotifications(for: transitions)
     }
@@ -248,8 +254,8 @@ enum InventoryStoreError: LocalizedError {
 }
 
 extension InventoryStore {
-    static func previewStore(hostsStore: HostsStore, tokenStore: TokenStore) -> InventoryStore {
-        let store = InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore, notificationPreferences: NotificationPreferencesStore())
+    static func previewStore(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore) -> InventoryStore {
+        let store = InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore, notificationPreferences: NotificationPreferencesStore(), activityStore: activityStore)
         store.sections = [
             InventoryDeviceSection(
                 host: PreviewFixtures.hostA,
@@ -272,17 +278,24 @@ extension InventoryStore {
 }
 
 private extension InventoryStore {
-    func quietDurationSeconds(for session: SessionSummary, now: Int64) -> Int64? {
+    var supervisionQuietDelayMs: Int64 { 5_000 }
+
+    func quietDurationSeconds(for session: SessionSummary, at timestampUnixMs: Int64) -> Int64? {
         guard session.isNotificationQuiet,
               let lastOutputAt = session.lastOutputAtUnixMs else { return nil }
-        return max(0, (now - lastOutputAt) / 1000)
+        let quietStartedAt = lastOutputAt + supervisionQuietDelayMs
+        return max(0, (timestampUnixMs - quietStartedAt) / 1000)
     }
 
-    func notificationTransitions(from previous: [InventoryDeviceSection], to next: [InventoryDeviceSection]) -> [InventorySessionNotificationTransition] {
+    func notificationTransitions(
+        from previous: [InventoryDeviceSection],
+        to next: [InventoryDeviceSection],
+        previousRefreshAtUnixMs: Int64?,
+        currentRefreshAtUnixMs: Int64
+    ) -> [InventorySessionNotificationTransition] {
         let previousSessions = Dictionary(uniqueKeysWithValues: previous.flatMap { section in
             section.sessions.map { ($0.notificationKey(hostID: section.host.id), $0) }
         })
-        let now = Int64(Date().timeIntervalSince1970 * 1000)
         let quietThreshold = Int64(notificationPreferences.quietThreshold.rawValue)
 
         return next.flatMap { section in
@@ -290,8 +303,8 @@ private extension InventoryStore {
                 let sessionKey = session.notificationKey(hostID: section.host.id)
                 guard let prior = previousSessions[sessionKey] else { return nil }
 
-                let priorQuietDuration = quietDurationSeconds(for: prior, now: now) ?? 0
-                let currentQuietDuration = quietDurationSeconds(for: session, now: now) ?? 0
+                let priorQuietDuration = previousRefreshAtUnixMs.flatMap { quietDurationSeconds(for: prior, at: $0) } ?? 0
+                let currentQuietDuration = quietDurationSeconds(for: session, at: currentRefreshAtUnixMs) ?? 0
 
                 if session.isNotificationQuiet,
                    currentQuietDuration >= quietThreshold,
@@ -335,6 +348,13 @@ private extension InventoryStore {
                 trigger: nil
             )
             try? await center.add(request)
+            activityStore.record(
+                category: .inventory,
+                title: "Notification sent",
+                message: "\(transition.event.title) for \(transition.session.displayTitle).",
+                hostLabel: transition.host.displayLabel,
+                sessionID: transition.session.sessionId
+            )
         }
     }
 }

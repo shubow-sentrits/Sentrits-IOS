@@ -353,7 +353,16 @@ struct InventoryView: View {
             HStack(spacing: 8) {
                 detailChip(session.provider.uppercased(), tint: Color("InventoryAccent"))
                 Button {
-                    notificationPreferences.toggleSubscription(sessionKey: session.notificationKey(hostID: section.host.id))
+                    let sessionKey = session.notificationKey(hostID: section.host.id)
+                    let willSubscribe = !notificationPreferences.isSubscribed(sessionKey: sessionKey)
+                    notificationPreferences.toggleSubscription(sessionKey: sessionKey)
+                    activityStore.record(
+                        category: .inventory,
+                        title: willSubscribe ? "Subscribed to session notifications" : "Muted session notifications",
+                        message: "\(session.displayTitle) on \(hostTitle(section.host)).",
+                        hostLabel: section.host.displayLabel,
+                        sessionID: session.sessionId
+                    )
                 } label: {
                     Image(systemName: notificationPreferences.isSubscribed(sessionKey: session.notificationKey(hostID: section.host.id)) ? "bell.fill" : "bell.slash")
                         .font(.caption.weight(.bold))

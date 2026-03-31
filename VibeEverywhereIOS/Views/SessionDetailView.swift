@@ -45,7 +45,7 @@ struct SessionDetailView: View {
                             .padding(.horizontal, layout.outerPadding)
                             .padding(.bottom, layout.bottomPadding)
                             .zIndex(1)
-                            .transition(.move(edge: .bottom))
+                            .transition(.move(edge: .top).combined(with: .opacity))
 //                    }
                 }
 
@@ -219,6 +219,7 @@ struct SessionDetailView: View {
         
         HStack(alignment: .center, spacing: 8) {
             Button {
+                Task { await viewModel.releaseControl()}
                 onClose?()
                 dismiss()
             } label: {

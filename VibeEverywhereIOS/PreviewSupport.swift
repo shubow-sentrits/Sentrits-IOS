@@ -228,7 +228,7 @@ struct PreviewAppContext {
         let hostsStore = HostsStore.previewStore(tokenStore: tokenStore)
         let activityStore = ActivityLogStore(seed: PreviewFixtures.activitySeed)
         let notificationPreferences = NotificationPreferencesStore()
-        let inventoryStore = InventoryStore.previewStore(hostsStore: hostsStore, tokenStore: tokenStore)
+        let inventoryStore = InventoryStore.previewStore(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
         let explorerStore = ExplorerWorkspaceStore.previewStore(hostsStore: hostsStore, tokenStore: tokenStore, activityStore: activityStore)
         let focusedSessionViewModel = explorerStore.sessions.first ?? SessionViewModel(host: PreviewFixtures.hostA, token: "preview-token-alpha", session: PreviewFixtures.sessionA, activityStore: activityStore)
         if focusedSessionViewModel.snapshot == nil {
