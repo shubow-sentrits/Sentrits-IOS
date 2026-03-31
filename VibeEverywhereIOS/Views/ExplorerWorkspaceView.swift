@@ -133,14 +133,14 @@ struct ExplorerWorkspaceView: View {
                         Button {
                             setNotifications(subscribed: true, for: tag)
                         } label: {
-                            Label("Bell All", systemImage: "bell")
+                            Label("All", systemImage: "bell")
                         }
                         .disabled(sessionKeys.isEmpty)
 
                         Button(role: .destructive) {
                             setNotifications(subscribed: false, for: tag)
                         } label: {
-                            Label("Bell Slash All", systemImage: "bell.slash")
+                            Label("All", systemImage: "bell.slash")
                         }
                         .disabled(sessionKeys.isEmpty)
                     }
