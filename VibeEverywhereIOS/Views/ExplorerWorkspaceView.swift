@@ -240,6 +240,7 @@ struct ExplorerWorkspaceView: View {
                 terminal: sessionViewModel.terminal,
                 mode: .preview,
                 isInputEnabled: false,
+                observerDimensions: sessionViewModel.observerTerminalDimensions,
                 onInput: { _ in },
                 onResize: { _ in }
             )

@@ -26,6 +26,8 @@ struct SessionMetadata: Codable {
     let lastGitChangeAtUnixMs: Int64?
     let lastControllerChangeAtUnixMs: Int64?
     let attentionSinceUnixMs: Int64?
+    let ptyCols: Int?
+    let ptyRows: Int?
     let currentSequence: Int?
     let attachedClientCount: Int?
     let recentFileChangeCount: Int?
@@ -58,6 +60,8 @@ struct SessionActivityMetadata: Codable {
     let lastGitChangeAtUnixMs: Int64?
     let lastControllerChangeAtUnixMs: Int64?
     let attentionSinceUnixMs: Int64?
+    let ptyCols: Int?
+    let ptyRows: Int?
     let currentSequence: Int?
     let attachedClientCount: Int?
     let recentFileChangeCount: Int?
@@ -128,6 +132,8 @@ struct SessionSnapshotSignals: Codable {
     let lastGitChangeAtUnixMs: Int64?
     let lastControllerChangeAtUnixMs: Int64?
     let attentionSinceUnixMs: Int64?
+    let ptyCols: Int?
+    let ptyRows: Int?
     let currentSequence: Int?
     let recentFileChangeCount: Int?
     let supervisionState: String?

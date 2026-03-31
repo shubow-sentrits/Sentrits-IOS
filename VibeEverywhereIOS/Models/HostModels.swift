@@ -285,6 +285,8 @@ struct SessionSummary: Codable, Identifiable, Hashable {
     let lastGitChangeAtUnixMs: Int64?
     let lastControllerChangeAtUnixMs: Int64?
     let attentionSinceUnixMs: Int64?
+    let ptyCols: Int?
+    let ptyRows: Int?
     let currentSequence: Int?
     let attachedClientCount: Int?
     let recentFileChangeCount: Int?
@@ -320,6 +322,8 @@ struct SessionSummary: Codable, Identifiable, Hashable {
         lastGitChangeAtUnixMs: Int64? = nil,
         lastControllerChangeAtUnixMs: Int64? = nil,
         attentionSinceUnixMs: Int64? = nil,
+        ptyCols: Int? = nil,
+        ptyRows: Int? = nil,
         currentSequence: Int? = nil,
         attachedClientCount: Int? = nil,
         recentFileChangeCount: Int? = nil,
@@ -354,6 +358,8 @@ struct SessionSummary: Codable, Identifiable, Hashable {
         self.lastGitChangeAtUnixMs = lastGitChangeAtUnixMs
         self.lastControllerChangeAtUnixMs = lastControllerChangeAtUnixMs
         self.attentionSinceUnixMs = attentionSinceUnixMs
+        self.ptyCols = ptyCols
+        self.ptyRows = ptyRows
         self.currentSequence = currentSequence
         self.attachedClientCount = attachedClientCount
         self.recentFileChangeCount = recentFileChangeCount

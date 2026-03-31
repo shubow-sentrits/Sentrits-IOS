@@ -10,6 +10,7 @@ struct TerminalTextView: UIViewRepresentable {
     @ObservedObject var terminal: TerminalEngine
     let mode: Mode
     let isInputEnabled: Bool
+    let observerDimensions: TerminalResize?
     let onInput: (String) -> Void
     let onResize: (TerminalResize) -> Void
 
@@ -60,6 +61,7 @@ struct TerminalTextView: UIViewRepresentable {
         private var lastRenderedChunkCount = 0
         private var lastInputEnabled: Bool?
         private var lastMode: Mode?
+        private var lastObserverDimensions: TerminalResize?
 
         init(parent: TerminalTextView) {
             self.parent = parent
@@ -103,10 +105,11 @@ struct TerminalTextView: UIViewRepresentable {
         func synchronizeRendererIfNeeded(forceFullReload: Bool = false) {
             guard isRendererReady, let webView else { return }
 
-            if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled {
+            if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled || lastObserverDimensions != parent.observerDimensions {
                 evaluate("window.vibeTerminal.setMode(\(jsonString(from: modePayload())))", in: webView)
                 lastMode = parent.mode
                 lastInputEnabled = parent.isInputEnabled
+                lastObserverDimensions = parent.observerDimensions
             }
 
             if forceFullReload || lastResetVersion != parent.terminal.resetVersion {
@@ -124,7 +127,10 @@ struct TerminalTextView: UIViewRepresentable {
         private func modePayload() -> TerminalModePayload {
             TerminalModePayload(
                 mode: parent.mode == .focused ? "focused" : "preview",
-                inputEnabled: parent.isInputEnabled
+                inputEnabled: parent.isInputEnabled,
+                reportResize: parent.isInputEnabled,
+                fixedCols: parent.isInputEnabled ? nil : parent.observerDimensions?.cols,
+                fixedRows: parent.isInputEnabled ? nil : parent.observerDimensions?.rows
             )
         }
 
@@ -146,4 +152,7 @@ struct TerminalTextView: UIViewRepresentable {
 private struct TerminalModePayload: Encodable {
     let mode: String
     let inputEnabled: Bool
+    let reportResize: Bool
+    let fixedCols: Int?
+    let fixedRows: Int?
 }

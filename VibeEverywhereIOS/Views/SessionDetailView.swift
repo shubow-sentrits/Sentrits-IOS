@@ -270,6 +270,7 @@ struct SessionDetailView: View {
                 terminal: viewModel.terminal,
                 mode: .focused,
                 isInputEnabled: viewModel.canSendInput,
+                observerDimensions: viewModel.canSendInput ? nil : viewModel.observerTerminalDimensions,
                 onInput: { data in
                     Task { await viewModel.sendTerminalInput(data) }
                 },

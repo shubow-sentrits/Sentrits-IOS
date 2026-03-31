@@ -91,6 +91,13 @@ final class SessionViewModel: ObservableObject {
         socketState == .connected ? "Waiting for terminal output..." : "Disconnected from session preview."
     }
 
+    var observerTerminalDimensions: TerminalResize? {
+        guard let cols = session.ptyCols, let rows = session.ptyRows, cols > 0, rows > 0 else {
+            return nil
+        }
+        return TerminalResize(cols: cols, rows: rows)
+    }
+
     func connect() {
         if case .connected = socketState {
             return
@@ -223,6 +230,8 @@ final class SessionViewModel: ObservableObject {
             lastGitChangeAtUnixMs: session.lastGitChangeAtUnixMs,
             lastControllerChangeAtUnixMs: session.lastControllerChangeAtUnixMs,
             attentionSinceUnixMs: session.attentionSinceUnixMs,
+            ptyCols: session.ptyCols,
+            ptyRows: session.ptyRows,
             currentSequence: session.currentSequence,
             attachedClientCount: session.attachedClientCount,
             recentFileChangeCount: session.recentFileChangeCount,
@@ -278,6 +287,8 @@ final class SessionViewModel: ObservableObject {
                 lastGitChangeAtUnixMs: metadata.lastGitChangeAtUnixMs,
                 lastControllerChangeAtUnixMs: metadata.lastControllerChangeAtUnixMs,
                 attentionSinceUnixMs: metadata.attentionSinceUnixMs,
+                ptyCols: metadata.ptyCols,
+                ptyRows: metadata.ptyRows,
                 currentSequence: metadata.currentSequence,
                 attachedClientCount: metadata.attachedClientCount,
                 recentFileChangeCount: metadata.recentFileChangeCount,
@@ -338,6 +349,8 @@ final class SessionViewModel: ObservableObject {
                 lastGitChangeAtUnixMs: metadata.lastGitChangeAtUnixMs ?? session.lastGitChangeAtUnixMs,
                 lastControllerChangeAtUnixMs: metadata.lastControllerChangeAtUnixMs ?? session.lastControllerChangeAtUnixMs,
                 attentionSinceUnixMs: metadata.attentionSinceUnixMs ?? session.attentionSinceUnixMs,
+                ptyCols: metadata.ptyCols ?? session.ptyCols,
+                ptyRows: metadata.ptyRows ?? session.ptyRows,
                 currentSequence: metadata.currentSequence ?? session.currentSequence,
                 attachedClientCount: metadata.attachedClientCount ?? session.attachedClientCount,
                 recentFileChangeCount: metadata.recentFileChangeCount ?? session.recentFileChangeCount,
@@ -379,6 +392,8 @@ final class SessionViewModel: ObservableObject {
                 lastGitChangeAtUnixMs: session.lastGitChangeAtUnixMs,
                 lastControllerChangeAtUnixMs: session.lastControllerChangeAtUnixMs,
                 attentionSinceUnixMs: session.attentionSinceUnixMs,
+                ptyCols: session.ptyCols,
+                ptyRows: session.ptyRows,
                 currentSequence: session.currentSequence,
                 attachedClientCount: session.attachedClientCount,
                 recentFileChangeCount: session.recentFileChangeCount,
@@ -488,6 +503,8 @@ final class SessionViewModel: ObservableObject {
             lastGitChangeAtUnixMs: snapshot.signals?.lastGitChangeAtUnixMs ?? session.lastGitChangeAtUnixMs,
             lastControllerChangeAtUnixMs: snapshot.signals?.lastControllerChangeAtUnixMs ?? session.lastControllerChangeAtUnixMs,
             attentionSinceUnixMs: snapshot.signals?.attentionSinceUnixMs ?? session.attentionSinceUnixMs,
+            ptyCols: snapshot.signals?.ptyCols ?? session.ptyCols,
+            ptyRows: snapshot.signals?.ptyRows ?? session.ptyRows,
             currentSequence: snapshot.currentSequence ?? snapshot.signals?.currentSequence ?? session.currentSequence,
             attachedClientCount: session.attachedClientCount,
             recentFileChangeCount: snapshot.signals?.recentFileChangeCount ?? session.recentFileChangeCount,

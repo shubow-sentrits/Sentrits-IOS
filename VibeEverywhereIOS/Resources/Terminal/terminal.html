@@ -70,6 +70,11 @@
     let inputEnabled = false;
     let lastReportedCols = 0;
     let lastReportedRows = 0;
+    let modeState = {
+      reportResize: false,
+      fixedCols: 0,
+      fixedRows: 0,
+    };
 
     terminal.loadAddon(fitAddon);
     terminal.open(host);
@@ -82,6 +87,9 @@
     }
 
     function fitAndReport() {
+      if (!modeState.reportResize) {
+        return;
+      }
       if (host.clientWidth <= 0 || host.clientHeight <= 0) {
         return;
       }
@@ -108,10 +116,21 @@
 
     function setMode(payload) {
       inputEnabled = !!payload.inputEnabled;
+      modeState.reportResize = !!payload.reportResize;
+      modeState.fixedCols = Number(payload.fixedCols || 0);
+      modeState.fixedRows = Number(payload.fixedRows || 0);
       terminal.options.disableStdin = !inputEnabled;
       terminal.options.cursorBlink = payload.mode === 'focused' && inputEnabled;
       terminal.options.fontSize = payload.mode === 'focused' ? 14 : 11;
-      requestAnimationFrame(fitAndReport);
+      requestAnimationFrame(() => {
+        if (!modeState.reportResize && modeState.fixedCols > 0 && modeState.fixedRows > 0) {
+          terminal.resize(modeState.fixedCols, modeState.fixedRows);
+          lastReportedCols = modeState.fixedCols;
+          lastReportedRows = modeState.fixedRows;
+          return;
+        }
+        fitAndReport();
+      });
     }
 
     terminal.onData((data) => {
@@ -121,6 +140,9 @@
     });
 
     new ResizeObserver(() => {
+      if (!modeState.reportResize) {
+        return;
+      }
       fitAndReport();
     }).observe(host);
 
@@ -128,6 +150,12 @@
       setMode,
       reset() {
         terminal.reset();
+        if (!modeState.reportResize && modeState.fixedCols > 0 && modeState.fixedRows > 0) {
+          terminal.resize(modeState.fixedCols, modeState.fixedRows);
+          lastReportedCols = modeState.fixedCols;
+          lastReportedRows = modeState.fixedRows;
+          return;
+        }
         fitAndReport();
       },
       appendBase64Chunks(chunks) {

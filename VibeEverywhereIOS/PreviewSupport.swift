@@ -158,6 +158,8 @@ enum PreviewFixtures {
             lastGitChangeAtUnixMs: sessionA.lastGitChangeAtUnixMs,
             lastControllerChangeAtUnixMs: sessionA.lastControllerChangeAtUnixMs,
             attentionSinceUnixMs: sessionA.attentionSinceUnixMs,
+            ptyCols: sessionA.ptyCols,
+            ptyRows: sessionA.ptyRows,
             currentSequence: sessionA.currentSequence,
             recentFileChangeCount: sessionA.recentFileChangeCount,
             supervisionState: sessionA.supervisionState,
