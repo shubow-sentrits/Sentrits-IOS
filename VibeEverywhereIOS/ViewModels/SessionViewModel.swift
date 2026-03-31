@@ -311,6 +311,43 @@ final class SessionViewModel: ObservableObject {
                 controllerSocket.disconnect(reason: "Control moved to another client.")
             }
             publishSessionStateChanged()
+        case let .sessionActivity(metadata):
+            session = SessionSummary(
+                sessionId: session.sessionId,
+                provider: session.provider,
+                workspaceRoot: session.workspaceRoot,
+                title: session.title,
+                status: session.status,
+                conversationId: session.conversationId,
+                groupTags: metadata.groupTags ?? session.groupTags,
+                controllerKind: session.controllerKind,
+                controllerClientId: session.controllerClientId,
+                isRecovered: session.isRecovered,
+                archivedRecord: session.archivedRecord,
+                isActive: metadata.isActive ?? session.isActive,
+                inventoryState: session.inventoryState,
+                activityState: metadata.activityState ?? session.activityState,
+                supervisionState: metadata.supervisionState ?? session.supervisionState,
+                attentionState: metadata.attentionState ?? session.attentionState,
+                attentionReason: metadata.attentionReason ?? session.attentionReason,
+                createdAtUnixMs: session.createdAtUnixMs,
+                lastStatusAtUnixMs: session.lastStatusAtUnixMs,
+                lastOutputAtUnixMs: metadata.lastOutputAtUnixMs ?? session.lastOutputAtUnixMs,
+                lastActivityAtUnixMs: metadata.lastActivityAtUnixMs ?? session.lastActivityAtUnixMs,
+                lastFileChangeAtUnixMs: metadata.lastFileChangeAtUnixMs ?? session.lastFileChangeAtUnixMs,
+                lastGitChangeAtUnixMs: metadata.lastGitChangeAtUnixMs ?? session.lastGitChangeAtUnixMs,
+                lastControllerChangeAtUnixMs: metadata.lastControllerChangeAtUnixMs ?? session.lastControllerChangeAtUnixMs,
+                attentionSinceUnixMs: metadata.attentionSinceUnixMs ?? session.attentionSinceUnixMs,
+                currentSequence: metadata.currentSequence ?? session.currentSequence,
+                attachedClientCount: metadata.attachedClientCount ?? session.attachedClientCount,
+                recentFileChangeCount: metadata.recentFileChangeCount ?? session.recentFileChangeCount,
+                gitDirty: metadata.gitDirty ?? session.gitDirty,
+                gitBranch: metadata.gitBranch ?? session.gitBranch,
+                gitModifiedCount: metadata.gitModifiedCount ?? session.gitModifiedCount,
+                gitStagedCount: metadata.gitStagedCount ?? session.gitStagedCount,
+                gitUntrackedCount: metadata.gitUntrackedCount ?? session.gitUntrackedCount
+            )
+            publishSessionStateChanged()
         case let .terminalOutput(output):
             guard controllerState != .connected else { return }
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
@@ -331,7 +368,7 @@ final class SessionViewModel: ObservableObject {
                 isActive: false,
                 inventoryState: session.inventoryState,
                 activityState: session.activityState,
-                supervisionState: session.supervisionState,
+                supervisionState: "stopped",
                 attentionState: session.attentionState,
                 attentionReason: session.attentionReason,
                 createdAtUnixMs: session.createdAtUnixMs,

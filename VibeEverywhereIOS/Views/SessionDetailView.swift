@@ -9,6 +9,8 @@ struct SessionDetailView: View {
     @State private var isPromptEditorPresented = false
     @State private var keyPageIndex = 0
     @State private var promptEditorDragOffset: CGFloat = 0
+    @State private var isKeyboardVisible = false
+    @State private var baselineAvailableHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
 
     init(
@@ -24,85 +26,131 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            focusedBackground
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let availableHeight = max(baselineAvailableHeight, proxy.size.height)
 
-            VStack(spacing: layout.verticalSpacing) {
-                headerBar
-                    .frame(height: layout.headerHeight, alignment: .top)
-                    .padding(.horizontal, layout.outerPadding)
-                    .padding(.top, layout.topPadding)
-
-                terminalPanel
-                    .layoutPriority(1)
-                    .padding(.horizontal, layout.terminalHorizontalPadding)
-
-                modeBar
-                    .frame(height: layout.modeBarHeight)
-                    .padding(.horizontal, layout.outerPadding)
-                    .padding(.bottom, layout.bottomPadding)
-
-                inputBar
-                    .frame(height: layout.inputBarHeight)
-                    .padding(.horizontal, layout.outerPadding)
-                    .padding(.bottom, layout.bottomPadding)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-            if isContextPanelPresented {
-                Color.black.opacity(0.24)
+            ZStack(alignment: .top) {
+                focusedBackground
                     .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                            isContextPanelPresented = false
+                
+                if isKeyboardVisible {
+//                    VStack{
+//                        modeBar
+//                            .frame(height: layout.modeBarHeight)
+//                            .padding(.horizontal, layout.outerPadding)
+//                            .zIndex(1)
+//                            .padding(.vertical, -10)
+                        inputBar
+                            .frame(height: layout.inputBarHeight)
+                            .padding(.horizontal, layout.outerPadding)
+                            .padding(.bottom, layout.bottomPadding)
+                            .zIndex(1)
+                            .transition(.move(edge: .bottom))
+//                    }
+                }
+
+                VStack(spacing: layout.verticalSpacing) {
+                    
+                    if !isKeyboardVisible {
+                        VStack(alignment: .center, spacing: 2) {
+                            Text(viewModel.session.displayTitle)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(Color("FocusedText"))
+                                .lineLimit(1)
+                            
+                            headerBar
+                                .frame(height: headerHeight, alignment: .center)
+                                .padding(.horizontal, layout.outerPadding)
+                                .padding(.top, headerTopPadding)
+                            
+                            Text(viewModel.session.workspaceRoot)
+                                .font(.caption)
+                                .foregroundStyle(Color("FocusedMuted"))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .zIndex(1)
 
-                contextPanel
-                    .frame(width: 320)
-                    .padding(.trailing, 10)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                    .zIndex(2)
-            }
+                    terminalPanel
+                        .frame(height: terminalHeight(for: availableHeight))
+                        .ignoresSafeArea(edges: isKeyboardVisible ? .top : [])
+                        .padding(.horizontal, layout.terminalHorizontalPadding)
 
-            if isPromptEditorPresented {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closePromptEditor()
+                    if !isKeyboardVisible {
+                        modeBar
+                            .frame(height: layout.modeBarHeight)
+                            .padding(.horizontal, layout.outerPadding)
+                        
+                        inputBar
+                            .frame(height: layout.inputBarHeight)
+                            .padding(.horizontal, layout.outerPadding)
+                            .padding(.bottom, layout.bottomPadding)
                     }
-                    .zIndex(3)
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(minHeight: availableHeight, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .animation(.spring(response: 0.24, dampingFraction: 0.9), value: isKeyboardVisible)
 
-                promptEditorPanel
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 12)
-                    .offset(y: promptEditorDragOffset)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                guard value.translation.height > 0 else { return }
-                                promptEditorDragOffset = value.translation.height
+                if isContextPanelPresented {
+                    Color.black.opacity(0.24)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                isContextPanelPresented = false
                             }
-                            .onEnded { value in
-                                if value.translation.height > 120 {
-                                    closePromptEditor()
-                                } else {
-                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                                        promptEditorDragOffset = 0
+                        }
+                        .zIndex(1)
+
+                    contextPanel
+                        .frame(width: 320)
+                        .padding(.trailing, 10)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                        .zIndex(2)
+                }
+
+                if isPromptEditorPresented {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            closePromptEditor()
+                        }
+                        .zIndex(3)
+
+                    promptEditorPanel
+                        .padding(.horizontal, 10)
+                        .padding(.top, 12)
+                        .offset(y: promptEditorDragOffset)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    guard value.translation.height < 0 else { return }
+                                    promptEditorDragOffset = value.translation.height
+                                }
+                                .onEnded { value in
+                                    if value.translation.height < -120 {
+                                        closePromptEditor()
+                                    } else {
+                                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                            promptEditorDragOffset = 0
+                                        }
                                     }
                                 }
-                            }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(4)
+                        )
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(4)
+                }
+            }
+            .onAppear {
+                baselineAvailableHeight = max(baselineAvailableHeight, proxy.size.height)
+            }
+            .onChange(of: proxy.size.height) { _, newValue in
+                baselineAvailableHeight = max(baselineAvailableHeight, newValue)
             }
         }
-        .navigationTitle(viewModel.session.displayTitle)
-        .navigationBarTitleDisplayMode(.inline)
         .task {
             guard autoActivate else { return }
             await viewModel.activate()
@@ -112,21 +160,44 @@ struct SessionDetailView: View {
             onSessionEnded?()
             dismiss()
         }
-        .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    onClose?()
-                    dismiss()
-                } label: {
-                    Label("Back", systemImage: "chevron.backward")
-                }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            updateKeyboardVisibility(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                isKeyboardVisible = false
             }
         }
+        .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private let layout = FocusedLayoutMetrics()
+    private var headerHeight: CGFloat { 34 }
+    private var headerTopPadding: CGFloat { isKeyboardVisible ? 4 : layout.topPadding }
+
+    private func terminalHeight(for availableHeight: CGFloat) -> CGFloat {
+        let reserved = layout.topPadding
+            + layout.headerSectionHeight
+            + layout.verticalSpacing
+            + layout.modeBarHeight
+            + layout.verticalSpacing
+            + layout.inputBarHeight
+            + layout.bottomPadding
+        return max(availableHeight - reserved, 240)
+    }
+
+    private func updateKeyboardVisibility(from notification: Notification) {
+        guard
+            let frameValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+        else { return }
+
+        let screenHeight = UIScreen.main.bounds.height
+        let overlap = max(0, screenHeight - frameValue.minY)
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+            isKeyboardVisible = overlap > 0
+        }
+    }
 
     private var focusedBackground: some View {
         LinearGradient(
@@ -145,38 +216,45 @@ struct SessionDetailView: View {
     }
 
     private var headerBar: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.status), tone: SessionBadgeSupport.sessionTone(for: viewModel.session.status))
-                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.supervisionStateLabel), tone: SessionBadgeSupport.supervisionTone(for: viewModel.session))
-                compactStatusBadge(SessionBadgeSupport.normalizedLabel(SessionBadgeSupport.socketLabel(for: viewModel.socketState)), tone: SessionBadgeSupport.socketTone(for: viewModel.socketState))
-                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.controllerKind), tone: viewModel.canSendInput ? .green : .orange)
-
-                Spacer(minLength: 8)
-
-                Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                        isContextPanelPresented.toggle()
-                    }
-                } label: {
-                    Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color("FocusedText"))
-                        .frame(width: 32, height: 32)
-                        .background(Color("FocusedPanelSoft").opacity(0.9))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-                .buttonStyle(.plain)
+        
+        HStack(alignment: .center, spacing: 8) {
+            Button {
+                onClose?()
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color("FocusedText"))
+                    .frame(width: 32, height: 32)
+                    .background(Color("FocusedPanelSoft").opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .frame(height: 32)
+            .buttonStyle(.plain)
+            
+            Spacer()
 
-            Text(viewModel.session.workspaceRoot)
-                .font(.caption)
-                .foregroundStyle(Color("FocusedMuted"))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(height: 16, alignment: .leading)
+            compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.status), tone: SessionBadgeSupport.sessionTone(for: viewModel.session.status))
+            compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.supervisionStateLabel), tone: SessionBadgeSupport.supervisionTone(for: viewModel.session))
+            compactStatusBadge(SessionBadgeSupport.normalizedLabel(SessionBadgeSupport.socketLabel(for: viewModel.socketState)), tone: SessionBadgeSupport.socketTone(for: viewModel.socketState))
+            compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.controllerKind), tone: viewModel.canSendInput ? .green : .orange)
+
+            Spacer()
+
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                    isContextPanelPresented.toggle()
+                }
+            } label: {
+                Image(systemName: isContextPanelPresented ? "sidebar.trailing" : "sidebar.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color("FocusedText"))
+                    .frame(width: 32, height: 32)
+                    .background(Color("FocusedPanelSoft").opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
+        .frame(height: 32)
     }
 
     private var terminalPanel: some View {
@@ -255,7 +333,7 @@ struct SessionDetailView: View {
         .background(Color("FocusedGlass"))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
@@ -264,9 +342,9 @@ struct SessionDetailView: View {
         HStack(alignment: .center, spacing: 5) {
             
             directionalKeyCluster
-            .frame(width: 140, height: 76)
+            .frame(width: 140, height: 60)
             
-            VStack(){
+            VStack(alignment: .trailing, spacing: 5){
                 HStack(alignment: .top, spacing: 10) {
                     
                     pageIndicator
@@ -290,13 +368,9 @@ struct SessionDetailView: View {
                             .font(.system(size: 13, weight: .semibold))
                         Text("Prompt Editor")
                             .font(.subheadline.weight(.semibold))
-//                        Spacer()
-//                        Text(viewModel.canSendInput ? "Compose multiline prompt" : "Request control to compose")
-//                            .font(.caption)
-//                            .foregroundStyle(Color("FocusedMuted"))
                     }
                     .padding(.horizontal, 20)
-                    .frame(height: 46)
+                    .frame(height: 25)
                     .background(Color("FocusedPanelSoft").opacity(0.92))
                     .foregroundStyle(viewModel.canSendInput ? Color("FocusedText") : Color("FocusedMuted"))
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -307,10 +381,11 @@ struct SessionDetailView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color("FocusedGlass"))
+        .background( isKeyboardVisible ?  Color.black :
+                     Color("FocusedGlass"))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
@@ -329,12 +404,12 @@ struct SessionDetailView: View {
     private var verticalKeyPager: some View {
         GeometryReader { proxy in
             TabView(selection: $keyPageIndex) {
-                expandedKeyGrid
+                primaryKeyGrid
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .rotationEffect(.degrees(90))
                     .tag(0)
                 
-                primaryKeyGrid
+                expandedKeyGrid
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .rotationEffect(.degrees(90))
                     .tag(1)
@@ -355,7 +430,7 @@ struct SessionDetailView: View {
                 } label: {
                     Image(systemName: key.systemImage)
                         .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 16, height: 30)
+                        .frame(width: 16, height: 20)
                 }
                 .frame(height: 40)
                 .buttonStyle(.bordered)
@@ -482,7 +557,7 @@ struct SessionDetailView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.3), radius: 22, x: 0, y: 12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private func closePromptEditor() {
@@ -654,6 +729,7 @@ private struct FocusedLayoutMetrics {
     let bottomPadding: CGFloat = 10
     let verticalSpacing: CGFloat = 10
     let headerHeight: CGFloat = 58
+    let headerSectionHeight: CGFloat = 82
     let modeBarHeight: CGFloat = 68
     let inputBarHeight: CGFloat = 118
 }

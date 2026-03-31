@@ -8,7 +8,7 @@ struct InventoryView: View {
     let notificationPreferences: NotificationPreferencesStore
     let onOpenExplorer: () -> Void
 
-    @StateObject private var store: InventoryStore
+    @ObservedObject private var store: InventoryStore
     @State private var createSheetHost: SavedHost?
     @State private var inventoryError: String?
     @State private var clearStoppedHost: SavedHost?
@@ -21,6 +21,7 @@ struct InventoryView: View {
         explorerStore: ExplorerWorkspaceStore,
         notificationPreferences: NotificationPreferencesStore,
         onOpenExplorer: @escaping () -> Void,
+        sharedStore: InventoryStore,
         previewStore: InventoryStore? = nil,
         autoRefreshOnAppear: Bool = true
     ) {
@@ -30,7 +31,7 @@ struct InventoryView: View {
         self.explorerStore = explorerStore
         self.notificationPreferences = notificationPreferences
         self.onOpenExplorer = onOpenExplorer
-        _store = StateObject(wrappedValue: previewStore ?? InventoryStore(hostsStore: hostsStore, tokenStore: tokenStore, notificationPreferences: notificationPreferences))
+        self.store = previewStore ?? sharedStore
         self.autoRefreshOnAppear = autoRefreshOnAppear
     }
 
@@ -625,6 +626,7 @@ private struct CreateSessionSheet: View {
             explorerStore: context.explorerStore,
             notificationPreferences: context.notificationPreferences,
             onOpenExplorer: {},
+            sharedStore: context.inventoryStore,
             previewStore: context.inventoryStore,
             autoRefreshOnAppear: false
         )

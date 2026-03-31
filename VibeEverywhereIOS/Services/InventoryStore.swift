@@ -272,18 +272,30 @@ extension InventoryStore {
 }
 
 private extension InventoryStore {
+    func quietDurationSeconds(for session: SessionSummary, now: Int64) -> Int64? {
+        guard session.isNotificationQuiet,
+              let lastOutputAt = session.lastOutputAtUnixMs else { return nil }
+        return max(0, (now - lastOutputAt) / 1000)
+    }
+
     func notificationTransitions(from previous: [InventoryDeviceSection], to next: [InventoryDeviceSection]) -> [InventorySessionNotificationTransition] {
         let previousSessions = Dictionary(uniqueKeysWithValues: previous.flatMap { section in
             section.sessions.map { ($0.notificationKey(hostID: section.host.id), $0) }
         })
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let quietThreshold = Int64(notificationPreferences.quietThreshold.rawValue)
 
         return next.flatMap { section in
             section.sessions.compactMap { session in
                 let sessionKey = session.notificationKey(hostID: section.host.id)
                 guard let prior = previousSessions[sessionKey] else { return nil }
 
-                if prior.isNotificationActive,
-                   session.isNotificationQuiet,
+                let priorQuietDuration = quietDurationSeconds(for: prior, now: now) ?? 0
+                let currentQuietDuration = quietDurationSeconds(for: session, now: now) ?? 0
+
+                if session.isNotificationQuiet,
+                   currentQuietDuration >= quietThreshold,
+                   priorQuietDuration < quietThreshold,
                    notificationPreferences.shouldNotify(for: .becameQuiet, sessionKey: sessionKey) {
                     return InventorySessionNotificationTransition(event: .becameQuiet, host: section.host, session: session)
                 }

@@ -38,9 +38,34 @@ struct SessionMetadata: Codable {
 
 enum SessionSocketEvent {
     case sessionUpdated(SessionMetadata)
+    case sessionActivity(SessionActivityMetadata)
     case terminalOutput(TerminalOutputPayload)
     case sessionExited(SessionExitedPayload)
     case error(SessionErrorPayload)
+}
+
+struct SessionActivityMetadata: Codable {
+    let sessionId: String
+    let activityState: String?
+    let groupTags: [String]?
+    let isActive: Bool?
+    let supervisionState: String?
+    let attentionState: String?
+    let attentionReason: String?
+    let lastOutputAtUnixMs: Int64?
+    let lastActivityAtUnixMs: Int64?
+    let lastFileChangeAtUnixMs: Int64?
+    let lastGitChangeAtUnixMs: Int64?
+    let lastControllerChangeAtUnixMs: Int64?
+    let attentionSinceUnixMs: Int64?
+    let currentSequence: Int?
+    let attachedClientCount: Int?
+    let recentFileChangeCount: Int?
+    let gitDirty: Bool?
+    let gitBranch: String?
+    let gitModifiedCount: Int?
+    let gitStagedCount: Int?
+    let gitUntrackedCount: Int?
 }
 
 enum SessionControllerSocketEvent {

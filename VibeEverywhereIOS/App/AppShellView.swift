@@ -1,21 +1,37 @@
 import SwiftUI
 import UserNotifications
 
+enum QuietNotificationThreshold: Int, CaseIterable, Identifiable {
+    case seconds5 = 5
+    case seconds15 = 15
+    case seconds30 = 30
+    case seconds60 = 60
+
+    var id: Int { rawValue }
+
+    var label: String { "\(rawValue)s" }
+}
+
 @MainActor
-final class NotificationPreferencesStore: ObservableObject {
+final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     @Published var quietEnabled: Bool
     @Published var stoppedEnabled: Bool
+    @Published var quietThreshold: QuietNotificationThreshold
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
     private let defaults: UserDefaults
     private let quietKey = "notifications.event.quiet"
     private let stoppedKey = "notifications.event.stopped"
+    private let quietThresholdKey = "notifications.event.quiet.threshold"
     private let sessionsKey = "notifications.sessions"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? true
         self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? true
+        self.quietThreshold = QuietNotificationThreshold(rawValue: defaults.integer(forKey: quietThresholdKey)) ?? .seconds15
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
         Task { await refreshAuthorizationStatus() }
     }
 
@@ -40,6 +56,11 @@ final class NotificationPreferencesStore: ObservableObject {
     func setStoppedEnabled(_ value: Bool) {
         stoppedEnabled = value
         defaults.set(value, forKey: stoppedKey)
+    }
+
+    func setQuietThreshold(_ value: QuietNotificationThreshold) {
+        quietThreshold = value
+        defaults.set(value.rawValue, forKey: quietThresholdKey)
     }
 
     func isSubscribed(sessionKey: String) -> Bool {
@@ -68,6 +89,13 @@ final class NotificationPreferencesStore: ObservableObject {
     private var subscribedSessionKeys: Set<String> {
         Set(defaults.stringArray(forKey: sessionsKey) ?? [])
     }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound]
+    }
 }
 
 
@@ -80,6 +108,7 @@ struct AppShellView: View {
     @State private var focusedSessionID: String?
     @State private var focusedHostID: UUID?
     @StateObject private var explorerStore: ExplorerWorkspaceStore
+    @StateObject private var inventoryStore: InventoryStore
     @ObservedObject var notificationPreferences: NotificationPreferencesStore
 
     init(hostsStore: HostsStore, tokenStore: TokenStore, activityStore: ActivityLogStore, notificationPreferences: NotificationPreferencesStore) {
@@ -92,6 +121,13 @@ struct AppShellView: View {
                 hostsStore: hostsStore,
                 tokenStore: tokenStore,
                 activityStore: activityStore
+            )
+        )
+        _inventoryStore = StateObject(
+            wrappedValue: InventoryStore(
+                hostsStore: hostsStore,
+                tokenStore: tokenStore,
+                notificationPreferences: notificationPreferences
             )
         )
     }
@@ -113,7 +149,8 @@ struct AppShellView: View {
                     activityStore: activityStore,
                     explorerStore: explorerStore,
                     notificationPreferences: notificationPreferences,
-                    onOpenExplorer: { selectedTab = 2 }
+                    onOpenExplorer: { selectedTab = 2 },
+                    sharedStore: inventoryStore
                 )
             }
             .tag(1)
@@ -172,12 +209,33 @@ struct AppShellView: View {
             }
         }
         .task {
+            await inventoryStore.refresh()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await inventoryStore.refresh()
+            }
+        }
+        .task {
             await explorerStore.syncConnectedHosts()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await explorerStore.syncConnectedHosts()
+            }
+        }
+        .onChange(of: hostsStore.savedHosts) {
+            Task { await inventoryStore.refresh() }
         }
         .onChange(of: hostsStore.savedHosts) {
             Task { await explorerStore.syncConnectedHosts() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vibeSessionStateDidChange)) { _ in
+            Task { await inventoryStore.refresh() }
             explorerStore.pruneEndedSessions()
             if focusedSessionViewModel?.session.isEnded == true {
                 clearFocusedSession()
@@ -353,6 +411,7 @@ final class ExplorerWorkspaceStore: ObservableObject {
         defer { isRefreshing = false }
 
         var next: [SessionViewModel] = []
+        var sessionsByHost: [UUID: [String: SessionSummary]] = [:]
         for viewModel in sessions {
             guard let hostIndex = hostsStore.savedHosts.firstIndex(where: { $0.id == viewModel.host.id }) else {
                 viewModel.disconnect()
@@ -362,6 +421,21 @@ final class ExplorerWorkspaceStore: ObservableObject {
             guard let token = hostsStore.token(for: host) ?? tokenStore.token(for: host.tokenKey) else {
                 viewModel.disconnect()
                 continue
+            }
+
+            if sessionsByHost[host.id] == nil {
+                do {
+                    let client = HostClient(host: host)
+                    let summaries = try await client.listSessions(for: host, token: token)
+                    sessionsByHost[host.id] = Dictionary(uniqueKeysWithValues: summaries.map { ($0.sessionId, $0) })
+                } catch {
+                    errorMessage = error.localizedDescription
+                    sessionsByHost[host.id] = [:]
+                }
+            }
+
+            if let refreshed = sessionsByHost[host.id]?[viewModel.session.sessionId] {
+                viewModel.updateSession(refreshed)
             }
 
             if host.address != viewModel.host.address || host.port != viewModel.host.port || token != viewModel.token {
@@ -508,6 +582,26 @@ private struct NotificationConfigView: View {
                             }
                         }
                         .tint(Color("AppTint"))
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Quiet notification delay")
+                                .font(.headline)
+                                .foregroundStyle(Color.white.opacity(0.9))
+                            Text("Send the quiet alert only after the session has remained quiet for this long.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.white.opacity(0.6))
+
+                            Picker("Quiet notification delay", selection: Binding(
+                                get: { notificationPreferences.quietThreshold },
+                                set: { notificationPreferences.setQuietThreshold($0) }
+                            )) {
+                                ForEach(QuietNotificationThreshold.allCases) { threshold in
+                                    Text(threshold.label).tag(threshold)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .disabled(!notificationPreferences.quietEnabled)
+                        }
 
                         Toggle(isOn: Binding(get: { notificationPreferences.stoppedEnabled }, set: { notificationPreferences.setStoppedEnabled($0) })) {
                             VStack(alignment: .leading, spacing: 4) {

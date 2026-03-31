@@ -83,6 +83,8 @@ final class SessionSocket {
         switch envelope.type {
         case "session.updated":
             onEvent?(.sessionUpdated(try decoder.decode(SessionMetadata.self, from: data)))
+        case "session.activity":
+            onEvent?(.sessionActivity(try decoder.decode(SessionActivityMetadata.self, from: data)))
         case "terminal.output":
             onEvent?(.terminalOutput(try decoder.decode(TerminalOutputPayload.self, from: data)))
         case "session.exited":
