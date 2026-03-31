@@ -127,6 +127,23 @@ struct ExplorerWorkspaceView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        let sessionKeys = notificationSessionKeys(for: tag)
+
+                        Button {
+                            setNotifications(subscribed: true, for: tag)
+                        } label: {
+                            Label("Bell All", systemImage: "bell")
+                        }
+                        .disabled(sessionKeys.isEmpty)
+
+                        Button(role: .destructive) {
+                            setNotifications(subscribed: false, for: tag)
+                        } label: {
+                            Label("Bell Slash All", systemImage: "bell.slash")
+                        }
+                        .disabled(sessionKeys.isEmpty)
+                    }
                 }
             }
         }
@@ -321,13 +338,44 @@ struct ExplorerWorkspaceView: View {
     private func toggleNotificationSubscription(for sessionViewModel: SessionViewModel) {
         let sessionKey = sessionViewModel.session.notificationKey(hostID: sessionViewModel.host.id)
         let willSubscribe = !notificationPreferences.isSubscribed(sessionKey: sessionKey)
-        notificationPreferences.toggleSubscription(sessionKey: sessionKey)
+        notificationPreferences.setSubscription(sessionKey: sessionKey, subscribed: willSubscribe)
         activityStore.record(
             category: .inventory,
             title: willSubscribe ? "Subscribed to session notifications" : "Muted session notifications",
             message: "\(sessionViewModel.session.displayTitle) on \(sessionViewModel.host.displayLabel)",
             host: sessionViewModel.host,
             sessionID: sessionViewModel.session.sessionId
+        )
+    }
+
+    private func notificationSessionKeys(for groupTag: String) -> [String] {
+        let sessions: [SessionViewModel]
+        if groupTag == "all" {
+            sessions = explorerStore.sessions
+        } else {
+            sessions = explorerStore.sessions.filter { $0.session.normalizedGroupTags.contains(groupTag) }
+        }
+        return sessions.map { $0.session.notificationKey(hostID: $0.host.id) }
+    }
+
+    private func setNotifications(subscribed: Bool, for groupTag: String) {
+        let sessions: [SessionViewModel]
+        if groupTag == "all" {
+            sessions = explorerStore.sessions
+        } else {
+            sessions = explorerStore.sessions.filter { $0.session.normalizedGroupTags.contains(groupTag) }
+        }
+        let sessionKeys = sessions.map { $0.session.notificationKey(hostID: $0.host.id) }
+        guard !sessionKeys.isEmpty else { return }
+
+        notificationPreferences.setSubscriptions(sessionKeys: sessionKeys, subscribed: subscribed)
+
+        let groupLabel = groupTag == "all" ? "All" : "#\(groupTag)"
+        activityStore.record(
+            category: .inventory,
+            title: subscribed ? "Subscribed group notifications" : "Muted group notifications",
+            message: "\(groupLabel) (\(sessions.count) sessions)",
+            hostLabel: "Explorer"
         )
     }
 

@@ -83,6 +83,39 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
         objectWillChange.send()
     }
 
+    func setSubscription(sessionKey: String, subscribed: Bool) {
+        setSubscriptions(sessionKeys: [sessionKey], subscribed: subscribed)
+    }
+
+    func setSubscriptions(sessionKeys: [String], subscribed: Bool) {
+        guard !sessionKeys.isEmpty else { return }
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let normalizedKeys = Array(Set(sessionKeys))
+        var keys = subscribedSessionKeys
+        var timestamps = subscribedSessionTimestamps
+        var didChange = false
+
+        for sessionKey in normalizedKeys {
+            if subscribed {
+                if !keys.contains(sessionKey) {
+                    keys.insert(sessionKey)
+                    timestamps[sessionKey] = now
+                    didChange = true
+                }
+            } else {
+                if keys.remove(sessionKey) != nil {
+                    timestamps.removeValue(forKey: sessionKey)
+                    didChange = true
+                }
+            }
+        }
+
+        guard didChange else { return }
+        defaults.set(Array(keys).sorted(), forKey: sessionsKey)
+        defaults.set(timestamps, forKey: subscriptionTimestampsKey)
+        objectWillChange.send()
+    }
+
     func shouldNotify(for event: InventoryNotificationEvent, sessionKey: String) -> Bool {
         guard isSubscribed(sessionKey: sessionKey) else { return false }
         switch event {
