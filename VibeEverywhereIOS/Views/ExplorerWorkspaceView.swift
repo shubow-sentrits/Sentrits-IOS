@@ -228,10 +228,10 @@ struct ExplorerWorkspaceView: View {
             .padding(.horizontal, -10)
 
             HStack(spacing: 8) {
-                explorerTag(normalizedBadgeLabel(sessionViewModel.session.status), tone: sessionTone(for: sessionViewModel.session.status))
-                explorerTag(normalizedBadgeLabel(sessionViewModel.session.supervisionStateLabel), tone: supervisionTone(for: sessionViewModel.session))
-                explorerTag(normalizedBadgeLabel(socketText(for: sessionViewModel.socketState)), tone: socketTone(for: sessionViewModel.socketState))
-                explorerTag(normalizedBadgeLabel(sessionViewModel.session.controllerKind), tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
+                explorerTag(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.status), tone: SessionBadgeSupport.sessionTone(for: sessionViewModel.session.status))
+                explorerTag(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.supervisionStateLabel), tone: SessionBadgeSupport.supervisionTone(for: sessionViewModel.session))
+                explorerTag(SessionBadgeSupport.normalizedLabel(SessionBadgeSupport.socketLabel(for: sessionViewModel.socketState)), tone: SessionBadgeSupport.socketTone(for: sessionViewModel.socketState))
+                explorerTag(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.controllerKind), tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
                     explorerTag(branch, tone: Color("ExplorerAccent").opacity(0.8))
                 }
@@ -344,80 +344,7 @@ struct ExplorerWorkspaceView: View {
     }
 
     private func explorerTag(_ text: String, tone: Color) -> some View {
-        Text(text)
-            .dynamicBadgeFont()
-            .foregroundStyle(tone)
-            .frame(width: 40)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(tone.opacity(0.18))
-            .clipShape(Capsule())
-    }
-
-    private func normalizedBadgeLabel(_ text: String) -> String {
-        if text.lowercased() == text {
-            return text.capitalized
-        }
-        return text
-    }
-
-    private func sessionTone(for status: String) -> Color {
-        switch status.lowercased() {
-        case "running", "attached", "starting", "awaitinginput":
-            return .green
-        case "exited":
-            return .gray
-        case "error":
-            return .red
-        default:
-            return .orange
-        }
-    }
-
-    private func socketText(for state: SessionSocket.ConnectionState) -> String {
-        switch state {
-        case .idle: return "idle"
-        case .connecting: return "connecting"
-        case .connected: return "connected"
-        case let .disconnected(reason): return reason ?? "disconnected"
-        }
-    }
-
-    private func socketTone(for state: SessionSocket.ConnectionState) -> Color {
-        switch state {
-        case .connected: return .green
-        case .connecting: return .orange
-        case .idle, .disconnected: return .gray
-        }
-    }
-
-    private func supervisionTone(for session: SessionSummary) -> Color {
-        switch session.supervisionStateLabel.lowercased() {
-        case "active":
-            return .green
-        case "stopped":
-            return .gray
-        default:
-            return .orange
-        }
-    }
-}
-
-private struct DynamicBadgeFontModifier: ViewModifier {
-    let weight: Font.Weight
-
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size: 100, weight: weight, design: .rounded))
-            .lineLimit(1)
-            .minimumScaleFactor(0.01)
-            .allowsTightening(true)
-    }
-}
-
-private extension View {
-    func dynamicBadgeFont(weight: Font.Weight = .semibold) -> some View {
-        modifier(DynamicBadgeFontModifier(weight: weight))
+        SessionCapsuleBadge(text: text, tone: tone, width: 40)
     }
 }
 

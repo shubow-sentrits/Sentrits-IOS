@@ -212,10 +212,10 @@ struct SessionsView: View {
             .frame(height: 168)
 
             HStack(spacing: 8) {
-                explorerPill(sessionViewModel.session.status, tone: sessionTone(for: sessionViewModel.session.status))
-                explorerPill(sessionViewModel.session.supervisionStateLabel, tone: supervisionTone(for: sessionViewModel.session))
-                explorerPill(socketText(for: sessionViewModel.socketState), tone: socketTone(for: sessionViewModel.socketState))
-                explorerPill(sessionViewModel.session.controllerKind, tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
+                explorerPill(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.status), tone: SessionBadgeSupport.sessionTone(for: sessionViewModel.session.status))
+                explorerPill(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.supervisionStateLabel), tone: SessionBadgeSupport.supervisionTone(for: sessionViewModel.session))
+                explorerPill(SessionBadgeSupport.normalizedLabel(SessionBadgeSupport.socketLabel(for: sessionViewModel.socketState, connectedText: "linked", disconnectedText: "offline")), tone: SessionBadgeSupport.socketTone(for: sessionViewModel.socketState))
+                explorerPill(SessionBadgeSupport.normalizedLabel(sessionViewModel.session.controllerKind), tone: sessionViewModel.canSendInput ? Color.green : Color.orange)
                 if let branch = sessionViewModel.primaryGitBranch, !branch.isEmpty {
                     explorerPill(branch, tone: Color("ExplorerAccent").opacity(0.8))
                 }
@@ -338,54 +338,6 @@ struct SessionsView: View {
 
     private var hostInfoVersion: String {
         viewModel.hostInfo?.version ?? "unknown"
-    }
-
-    private func socketText(for state: SessionSocket.ConnectionState) -> String {
-        switch state {
-        case .idle:
-            return "idle"
-        case .connecting:
-            return "connecting"
-        case .connected:
-            return "linked"
-        case let .disconnected(reason):
-            return reason == nil ? "offline" : "offline"
-        }
-    }
-
-    private func sessionTone(for status: String) -> Color {
-        switch status.lowercased() {
-        case "running", "awaitinginput", "attached", "starting":
-            return Color.green
-        case "error":
-            return Color.red
-        case "exited":
-            return Color.gray
-        default:
-            return Color.orange
-        }
-    }
-
-    private func socketTone(for state: SessionSocket.ConnectionState) -> Color {
-        switch state {
-        case .connected:
-            return Color.green
-        case .connecting:
-            return Color.orange
-        case .idle, .disconnected:
-            return Color.gray
-        }
-    }
-
-    private func supervisionTone(for session: SessionSummary) -> Color {
-        switch session.supervisionStateLabel.lowercased() {
-        case "active":
-            return Color.green
-        case "stopped":
-            return Color.gray
-        default:
-            return Color.orange
-        }
     }
 
     private func explorerMetric(value: String, label: String) -> some View {

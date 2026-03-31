@@ -147,10 +147,10 @@ struct SessionDetailView: View {
     private var headerBar: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                compactStatusBadge(normalizedBadgeLabel(viewModel.session.status), tone: sessionStatusColor(viewModel.session.status))
-                compactStatusBadge(normalizedBadgeLabel(viewModel.session.supervisionStateLabel), tone: supervisionColor(viewModel.session))
-                compactStatusBadge(normalizedBadgeLabel(socketLabel(viewModel.socketState)), tone: socketColor(viewModel.socketState))
-                compactStatusBadge(normalizedBadgeLabel(viewModel.session.controllerKind), tone: viewModel.canSendInput ? .green : .orange)
+                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.status), tone: SessionBadgeSupport.sessionTone(for: viewModel.session.status))
+                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.supervisionStateLabel), tone: SessionBadgeSupport.supervisionTone(for: viewModel.session))
+                compactStatusBadge(SessionBadgeSupport.normalizedLabel(SessionBadgeSupport.socketLabel(for: viewModel.socketState)), tone: SessionBadgeSupport.socketTone(for: viewModel.socketState))
+                compactStatusBadge(SessionBadgeSupport.normalizedLabel(viewModel.session.controllerKind), tone: viewModel.canSendInput ? .green : .orange)
 
                 Spacer(minLength: 8)
 
@@ -290,12 +290,12 @@ struct SessionDetailView: View {
                             .font(.system(size: 13, weight: .semibold))
                         Text("Prompt Editor")
                             .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Text(viewModel.canSendInput ? "Compose multiline prompt" : "Request control to compose")
-                            .font(.caption)
-                            .foregroundStyle(Color("FocusedMuted"))
+//                        Spacer()
+//                        Text(viewModel.canSendInput ? "Compose multiline prompt" : "Request control to compose")
+//                            .font(.caption)
+//                            .foregroundStyle(Color("FocusedMuted"))
                     }
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 20)
                     .frame(height: 46)
                     .background(Color("FocusedPanelSoft").opacity(0.92))
                     .foregroundStyle(viewModel.canSendInput ? Color("FocusedText") : Color("FocusedMuted"))
@@ -596,70 +596,8 @@ struct SessionDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func socketLabel(_ state: SessionSocket.ConnectionState) -> String {
-        switch state {
-        case .idle:
-            return "idle"
-        case .connecting:
-            return "connecting"
-        case .connected:
-            return "connected"
-        case let .disconnected(reason):
-            return reason ?? "disconnected"
-        }
-    }
-
-    private func sessionStatusColor(_ status: String) -> Color {
-        switch status.lowercased() {
-        case "running", "attached", "starting", "awaitinginput":
-            return .green
-        case "exited":
-            return .gray
-        case "error":
-            return .red
-        default:
-            return .orange
-        }
-    }
-
-    private func socketColor(_ state: SessionSocket.ConnectionState) -> Color {
-        switch state {
-        case .connected:
-            return .green
-        case .connecting:
-            return .orange
-        case .idle, .disconnected:
-            return .gray
-        }
-    }
-
-    private func supervisionColor(_ session: SessionSummary) -> Color {
-        switch session.supervisionStateLabel.lowercased() {
-        case "active":
-            return .green
-        case "stopped":
-            return .gray
-        default:
-            return .orange
-        }
-    }
-
     private func compactStatusBadge(_ text: String, tone: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(tone)
-            .lineLimit(1)
-            .padding(.horizontal, 9)
-            .frame(height: 28)
-            .background(tone.opacity(0.18))
-            .clipShape(Capsule())
-    }
-
-    private func normalizedBadgeLabel(_ text: String) -> String {
-        if text.lowercased() == text {
-            return text.capitalized
-        }
-        return text
+        SessionCapsuleBadge(text: text, tone: tone, height: 28, horizontalPadding: 9, verticalPadding: 0)
     }
 
     private var directionalKeys: [TerminalControlKey] {

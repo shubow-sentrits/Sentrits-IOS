@@ -24,6 +24,7 @@
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
 		A00000000000000000000021 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* SessionDetailView.swift */; };
+		A00000000000000000000066 /* SessionBadgeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000067 /* SessionBadgeSupport.swift */; };
 		A0000000000000000000003B /* DiscoveryListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* DiscoveryListener.swift */; };
 		A0000000000000000000003C /* HostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000003A /* HostsStore.swift */; };
 		A00000000000000000000041 /* InventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000042 /* InventoryStore.swift */; };
@@ -59,6 +60,7 @@
 		A0000000000000000000001F /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		A00000000000000000000020 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		A00000000000000000000022 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
+		A00000000000000000000067 /* SessionBadgeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionBadgeSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000023 /* VibeEverywhereIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = VibeEverywhereIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A00000000000000000000039 /* DiscoveryListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryListener.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				A0000000000000000000001E /* ConnectView.swift */,
 				A00000000000000000000063 /* ExplorerWorkspaceView.swift */,
 				A0000000000000000000001F /* PairingView.swift */,
+				A00000000000000000000067 /* SessionBadgeSupport.swift */,
 				A00000000000000000000020 /* SessionsView.swift */,
 				A00000000000000000000022 /* SessionDetailView.swift */,
 				A0000000000000000000005A /* ActivityView.swift */,
@@ -288,6 +291,7 @@
 				A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */,
 				A00000000000000000000045 /* InventoryView.swift in Sources */,
 				A0000000000000000000000F /* PairingView.swift in Sources */,
+				A00000000000000000000066 /* SessionBadgeSupport.swift in Sources */,
 				A00000000000000000000010 /* SessionsView.swift in Sources */,
 				A00000000000000000000021 /* SessionDetailView.swift in Sources */,
 				A00000000000000000000055 /* ActivityLog.swift in Sources */,
