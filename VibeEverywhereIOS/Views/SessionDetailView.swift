@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SessionDetailView: View {
     @ObservedObject var viewModel: SessionViewModel
+    @ObservedObject var notificationPreferences: NotificationPreferencesStore
+    @ObservedObject var activityStore: ActivityLogStore
     let autoActivate: Bool
     let onClose: (() -> Void)?
     let onSessionEnded: (() -> Void)?
@@ -15,11 +17,15 @@ struct SessionDetailView: View {
 
     init(
         viewModel: SessionViewModel,
+        notificationPreferences: NotificationPreferencesStore,
+        activityStore: ActivityLogStore,
         autoActivate: Bool = true,
         onClose: (() -> Void)? = nil,
         onSessionEnded: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
+        self.notificationPreferences = notificationPreferences
+        self.activityStore = activityStore
         self.autoActivate = autoActivate
         self.onClose = onClose
         self.onSessionEnded = onSessionEnded
@@ -301,6 +307,17 @@ struct SessionDetailView: View {
 
             Spacer(minLength: 4)
 
+            Button {
+                toggleNotificationSubscription()
+            } label: {
+                Image(systemName: notificationPreferences.isSubscribed(sessionKey: viewModel.session.notificationKey(hostID: viewModel.host.id)) ? "bell.fill" : "bell.slash")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(width: 28, height: 24)
+            }
+            .buttonStyle(.bordered)
+            .tint(notificationPreferences.isSubscribed(sessionKey: viewModel.session.notificationKey(hostID: viewModel.host.id)) ? Color("FocusedAccent") : Color("FocusedMuted"))
+            .frame(height: 24)
+
             if viewModel.canSendInput {
                 Button("Release") {
                     Task { await viewModel.releaseControl() }
@@ -337,6 +354,19 @@ struct SessionDetailView: View {
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func toggleNotificationSubscription() {
+        let sessionKey = viewModel.session.notificationKey(hostID: viewModel.host.id)
+        let willSubscribe = !notificationPreferences.isSubscribed(sessionKey: sessionKey)
+        notificationPreferences.toggleSubscription(sessionKey: sessionKey)
+        activityStore.record(
+            category: .inventory,
+            title: willSubscribe ? "Subscribed to session notifications" : "Muted session notifications",
+            message: "\(viewModel.session.displayTitle) on \(viewModel.host.displayLabel)",
+            host: viewModel.host,
+            sessionID: viewModel.session.sessionId
+        )
     }
 
     private var inputBar: some View {
@@ -744,6 +774,11 @@ private struct TerminalControlKey {
 #Preview("Focused Session") {
     let context = PreviewAppContext.make()
     NavigationStack {
-        SessionDetailView(viewModel: context.focusedSessionViewModel, autoActivate: false)
+        SessionDetailView(
+            viewModel: context.focusedSessionViewModel,
+            notificationPreferences: context.notificationPreferences,
+            activityStore: context.activityStore,
+            autoActivate: false
+        )
     }
 }

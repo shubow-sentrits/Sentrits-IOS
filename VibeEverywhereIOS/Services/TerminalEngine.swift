@@ -30,7 +30,7 @@ final class TerminalEngine: ObservableObject {
         guard seqEnd >= seqStart else { return }
         guard Data(base64Encoded: dataBase64) != nil else { return }
 
-        if outputChunksBase64.isEmpty, pendingChunks.isEmpty, nextExpectedSequence == 0 {
+        if pendingChunks.isEmpty, nextExpectedSequence == 0 {
             nextExpectedSequence = seqStart
         }
 

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ExplorerWorkspaceView: View {
     @ObservedObject var explorerStore: ExplorerWorkspaceStore
+    @ObservedObject var notificationPreferences: NotificationPreferencesStore
+    @ObservedObject var activityStore: ActivityLogStore
     let onFocusSession: (String, UUID) -> Void
     @State private var draftGroupName = ""
     @State private var isCreateGroupPresented = false
@@ -207,13 +209,30 @@ struct ExplorerWorkspaceView: View {
                         }
                     }
                     
-                    Text(sessionViewModel.host.displayLabel)
-                        .font(.footnote)
-                        .foregroundStyle(Color("ExplorerMuted"))
-                    Text(sessionViewModel.session.workspaceRoot)
-                        .font(.footnote)
-                        .foregroundStyle(Color("ExplorerMuted"))
-                        .lineLimit(1)
+                    HStack{
+                        VStack(alignment: .leading) {
+                            Text(sessionViewModel.host.displayLabel)
+                                .font(.footnote)
+                                .foregroundStyle(Color("ExplorerMuted"))
+                            Text(sessionViewModel.session.workspaceRoot)
+                                .font(.footnote)
+                                .foregroundStyle(Color("ExplorerMuted"))
+                                .lineLimit(1)
+                            
+                        }
+                        Spacer()
+                        Button {
+                            toggleNotificationSubscription(for: sessionViewModel)
+                        } label: {
+                            Image(systemName: notificationPreferences.isSubscribed(sessionKey: sessionViewModel.session.notificationKey(hostID: sessionViewModel.host.id)) ? "bell.fill" : "bell.slash")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 28, height: 24)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(notificationPreferences.isSubscribed(sessionKey: sessionViewModel.session.notificationKey(hostID: sessionViewModel.host.id)) ? Color("ExplorerAccent") : .gray)
+                        .accessibilityLabel("Toggle notifications")
+                    }
                 }
             }
 
@@ -298,6 +317,19 @@ struct ExplorerWorkspaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 
+    private func toggleNotificationSubscription(for sessionViewModel: SessionViewModel) {
+        let sessionKey = sessionViewModel.session.notificationKey(hostID: sessionViewModel.host.id)
+        let willSubscribe = !notificationPreferences.isSubscribed(sessionKey: sessionKey)
+        notificationPreferences.toggleSubscription(sessionKey: sessionKey)
+        activityStore.record(
+            category: .inventory,
+            title: willSubscribe ? "Subscribed to session notifications" : "Muted session notifications",
+            message: "\(sessionViewModel.session.displayTitle) on \(sessionViewModel.host.displayLabel)",
+            host: sessionViewModel.host,
+            sessionID: sessionViewModel.session.sessionId
+        )
+    }
+
     private var createGroupSheet: some View {
         NavigationStack {
             Form {
@@ -351,6 +383,11 @@ struct ExplorerWorkspaceView: View {
 #Preview("Explorer") {
     let context = PreviewAppContext.make()
     NavigationStack {
-        ExplorerWorkspaceView(explorerStore: context.explorerStore, onFocusSession: { _, _ in })
+        ExplorerWorkspaceView(
+            explorerStore: context.explorerStore,
+            notificationPreferences: context.notificationPreferences,
+            activityStore: context.activityStore,
+            onFocusSession: { _, _ in }
+        )
     }
 }

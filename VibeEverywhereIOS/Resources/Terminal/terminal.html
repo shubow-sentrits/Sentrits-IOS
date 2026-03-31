@@ -68,6 +68,8 @@
     });
     const fitAddon = new FitAddon.FitAddon();
     let inputEnabled = false;
+    let lastReportedCols = 0;
+    let lastReportedRows = 0;
 
     terminal.loadAddon(fitAddon);
     terminal.open(host);
@@ -80,7 +82,18 @@
     }
 
     function fitAndReport() {
+      if (host.clientWidth <= 0 || host.clientHeight <= 0) {
+        return;
+      }
       fitAddon.fit();
+      if (terminal.cols <= 0 || terminal.rows <= 0) {
+        return;
+      }
+      if (terminal.cols === lastReportedCols && terminal.rows === lastReportedRows) {
+        return;
+      }
+      lastReportedCols = terminal.cols;
+      lastReportedRows = terminal.rows;
       postMessage('terminalResize', { cols: terminal.cols, rows: terminal.rows });
     }
 

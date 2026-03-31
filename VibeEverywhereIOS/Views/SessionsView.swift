@@ -5,6 +5,7 @@ struct SessionsView: View {
     let token: String
     let onConnected: () -> Void
     @ObservedObject var activityStore: ActivityLogStore
+    @StateObject private var notificationPreferences = NotificationPreferencesStore()
 
     @StateObject private var viewModel: SessionsViewModel
     @State private var draftGroupName = ""
@@ -55,7 +56,11 @@ struct SessionsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: ExplorerRoute.self) { route in
             if let focusedViewModel = viewModel.focusedSession(for: route) {
-                SessionDetailView(viewModel: focusedViewModel)
+                SessionDetailView(
+                    viewModel: focusedViewModel,
+                    notificationPreferences: notificationPreferences,
+                    activityStore: activityStore
+                )
             }
         }
         .task {

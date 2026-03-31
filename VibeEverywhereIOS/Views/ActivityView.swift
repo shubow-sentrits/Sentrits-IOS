@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ActivityView: View {
     @ObservedObject var activityStore: ActivityLogStore
+    @State private var showClearConfirmation = false
 
     private let calendar = Calendar.current
 
@@ -24,6 +25,14 @@ struct ActivityView: View {
             .scrollIndicators(.hidden)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .alert("Clear activity log?", isPresented: $showClearConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear", role: .destructive) {
+                activityStore.clear()
+            }
+        } message: {
+            Text("This removes all activity entries from the current device.")
+        }
     }
 
     private var activityBackground: some View {
@@ -62,14 +71,31 @@ struct ActivityView: View {
     }
 
     private var titleRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Activity")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(Color("ActivityForeground"))
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Activity")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("ActivityForeground"))
 
-            Text("Important host and session events.")
-                .font(.subheadline)
-                .foregroundStyle(Color("ActivityMuted"))
+                Text("Important host and session events.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color("ActivityMuted"))
+            }
+
+            Spacer()
+
+            Button {
+                showClearConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color("ActivityForeground"))
+                    .frame(width: 36, height: 36)
+                    .background(Color("ActivitySurfaceLow"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(activityStore.entries.isEmpty)
+            .opacity(activityStore.entries.isEmpty ? 0.45 : 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

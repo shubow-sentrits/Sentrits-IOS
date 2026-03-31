@@ -24,6 +24,7 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
     private let stoppedKey = "notifications.event.stopped"
     private let quietThresholdKey = "notifications.event.quiet.threshold"
     private let sessionsKey = "notifications.sessions"
+    private let subscriptionTimestampsKey = "notifications.sessions.subscribedAt"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -69,12 +70,16 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
 
     func toggleSubscription(sessionKey: String) {
         var keys = subscribedSessionKeys
+        var timestamps = subscribedSessionTimestamps
         if keys.contains(sessionKey) {
             keys.remove(sessionKey)
+            timestamps.removeValue(forKey: sessionKey)
         } else {
             keys.insert(sessionKey)
+            timestamps[sessionKey] = Int64(Date().timeIntervalSince1970 * 1000)
         }
         defaults.set(Array(keys).sorted(), forKey: sessionsKey)
+        defaults.set(timestamps, forKey: subscriptionTimestampsKey)
         objectWillChange.send()
     }
 
@@ -86,8 +91,29 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
         }
     }
 
+    func subscriptionStartedAtUnixMs(sessionKey: String) -> Int64? {
+        subscribedSessionTimestamps[sessionKey]
+    }
+
     private var subscribedSessionKeys: Set<String> {
         Set(defaults.stringArray(forKey: sessionsKey) ?? [])
+    }
+
+    private var subscribedSessionTimestamps: [String: Int64] {
+        let raw = defaults.dictionary(forKey: subscriptionTimestampsKey) ?? [:]
+        var timestamps: [String: Int64] = [:]
+        for (key, value) in raw {
+            if let int64Value = value as? Int64 {
+                timestamps[key] = int64Value
+            } else if let intValue = value as? Int {
+                timestamps[key] = Int64(intValue)
+            } else if let doubleValue = value as? Double {
+                timestamps[key] = Int64(doubleValue)
+            } else if let numberValue = value as? NSNumber {
+                timestamps[key] = numberValue.int64Value
+            }
+        }
+        return timestamps
     }
 
     nonisolated func userNotificationCenter(
@@ -107,6 +133,7 @@ struct AppShellView: View {
     @State private var selectedTab = 0
     @State private var focusedSessionID: String?
     @State private var focusedHostID: UUID?
+    @State private var pendingInventoryRefreshTask: Task<Void, Never>?
     @StateObject private var explorerStore: ExplorerWorkspaceStore
     @StateObject private var inventoryStore: InventoryStore
     @ObservedObject var notificationPreferences: NotificationPreferencesStore
@@ -162,6 +189,8 @@ struct AppShellView: View {
             NavigationStack {
                 ExplorerWorkspaceView(
                     explorerStore: explorerStore,
+                    notificationPreferences: notificationPreferences,
+                    activityStore: activityStore,
                     onFocusSession: { sessionID, hostID in
                         focusedSessionID = sessionID
                         focusedHostID = hostID
@@ -198,6 +227,8 @@ struct AppShellView: View {
                 NavigationStack {
                     SessionDetailView(
                         viewModel: viewModel,
+                        notificationPreferences: notificationPreferences,
+                        activityStore: activityStore,
                         onClose: {
                             clearFocusedSession()
                         },
@@ -230,13 +261,19 @@ struct AppShellView: View {
             }
         }
         .onChange(of: hostsStore.savedHosts) {
+            pendingInventoryRefreshTask?.cancel()
             Task { await inventoryStore.refresh() }
         }
         .onChange(of: hostsStore.savedHosts) {
             Task { await explorerStore.syncConnectedHosts() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vibeSessionStateDidChange)) { _ in
-            Task { await inventoryStore.refresh() }
+            pendingInventoryRefreshTask?.cancel()
+            pendingInventoryRefreshTask = Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                guard !Task.isCancelled else { return }
+                await inventoryStore.refresh()
+            }
             explorerStore.pruneEndedSessions()
             if focusedSessionViewModel?.session.isEnded == true {
                 clearFocusedSession()

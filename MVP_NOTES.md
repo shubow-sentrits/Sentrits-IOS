@@ -1,87 +1,98 @@
-# VibeEverywhere iOS Notes
+# Sentrits iOS MVP Notes
 
-## Status
+## Current Status
 
-This repo is **not** the current product shape yet.
+The iOS client is now a working first-class remote client for `vibe-hostd`.
 
-It contains an older SwiftUI MVP that proved basic connectivity, but it does not match the current runtime model or the new UI direction.
-
-The real target is now:
+Current top-level app surfaces:
 
 - Pairing
 - Inventory
 - Explorer
 - Activity
-- Focused session view
+- Config
+- focused session view
 
-with true native UDP discovery and a better terminal renderer.
+## Current MVP Scope
 
-## What Still Has Value
+The current iOS MVP supports:
 
-These parts are useful foundations:
+- native UDP discovery on iOS
+- pairing and saved host management
+- bearer-token-based authenticated host access
+- session inventory by paired host
+- connected-session Explorer workspace
+- focused session control over the dedicated remote controller WebSocket
+- observer vs controller state in the focused terminal
+- local client-side notifications for subscribed:
+  - session became quiet
+  - session stopped
 
-- `HostClient.swift`
-- `SessionSocket.swift`
-- `SavedHostsStore.swift`
-- `KeychainTokenStore.swift`
+## Current Screen Roles
 
-They should be treated as reusable building blocks, not proof that the current app structure is correct.
+- Pairing
+  - discover hosts
+  - request pairing
+  - claim and save trusted hosts
+- Inventory
+  - list sessions by host
+  - create, stop, clear ended sessions
+  - subscribe a session for notifications
+- Explorer
+  - connected-session workspace
+  - compact terminal previews only
+  - no direct control from the mini view
+- Focused session
+  - primary interactive terminal
+  - request or release control
+  - direct terminal input and resize
+  - prompt editor and session context
+- Activity
+  - local audit-style event log
+- Config
+  - notification preferences
+  - quiet notification threshold
 
-## What Is Outdated
+## Runtime Alignment
 
-The current UI/view-model structure is still from the old MVP:
+The iOS client assumes the current runtime model:
 
-- form-heavy connect flow
-- old sessions list/detail flow
-- lossy text terminal rendering
-- no grouped inventory
-- no explorer workspace
-- no activity tab
-- no true discovery flow
+- one PTY per session
+- many observers
+- one active controller
+- observer session WebSocket for metadata and replay-style updates
+- dedicated controller WebSocket for low-latency focused control
 
-## Current Runtime Alignment
+The intended iOS flow is:
 
-The runtime now supports:
+- Inventory and Explorer stay observer-oriented
+- the focused session requests control only when needed
+- the focused terminal is the only interactive control surface
 
-- UDP discovery broadcast
-- `GET /discovery/info`
-- pairing request + claim
-- session list/create/stop
-- group tags
-- overview and session websockets
-- read-only snapshot/file/tail access
+## Known MVP Limits
 
-That means the iOS client can now be built as a real first-class native client.
+- initial render after attach/control can still be imperfect until the remote program repaints
+- the terminal renderer is still `xterm.js` inside `WKWebView`
+- local notifications only work while the app is alive enough to observe runtime changes
+- there is no APNs push system yet
+- compact Explorer previews are intentionally lower fidelity than the focused terminal
 
-## Implementation Direction
+## Explicit Non-Goals
 
-The rebuild should use:
+Current MVP does not try to solve:
 
-- modern SwiftUI
-- `NavigationStack` and data-driven navigation
-- store-driven state instead of screen-local networking
-- native UDP discovery
-- a real terminal rendering path
+- internet relay or tunnel access
+- user-account or multi-user identity management
+- push notifications through APNs
+- perfect first-frame terminal reconstruction
+- multiple simultaneous controllers
+- full native terminal replacement for `xterm.js`
 
-## Design Source
+## Current Direction
 
-The current visual direction lives in:
+The iOS client should keep moving toward:
 
-- `UI_design/vibeops_atmospheric/DESIGN.md`
-- `UI_design/pairing`
-- `UI_design/inventory`
-- `UI_design/explorer`
-- `UI_design/interactive_terminal_view`
-- `UI_design/activity_log`
-
-## Reference
-
-For discovery and pairing behavior only, use:
-
-- `/Users/shubow/dev/moonlight-ios`
-
-Use it as a network-behavior reference, not as a UI or architecture template.
-
-## Next Step
-
-Treat this repo as a rebuild target, not as a nearly-finished app.
+- a clean native supervision client
+- focused-view-first terminal quality
+- preview-only compact explorer tiles
+- stricter reuse of shared session badge and formatting utilities

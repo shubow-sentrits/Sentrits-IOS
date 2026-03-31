@@ -37,4 +37,8 @@ final class ActivityLogStore: ObservableObject {
     func summary(now: Date = Date(), calendar: Calendar = .current) -> ActivitySummary {
         log.summary(now: now, calendar: calendar)
     }
+
+    func clear() {
+        log = ActivityLog(entries: [], maxEntries: log.maxEntries)
+    }
 }

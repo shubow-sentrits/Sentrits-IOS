@@ -53,18 +53,6 @@ struct InventoryView: View {
                     .padding(.bottom, 120)
                 }
                 .scrollIndicators(.hidden)
-                .task {
-                    guard autoRefreshOnAppear else { return }
-                    await store.refresh()
-                }
-                .task {
-                    guard autoRefreshOnAppear else { return }
-                    while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(15))
-                        guard !Task.isCancelled else { return }
-                        await store.refresh()
-                    }
-                }
                 .refreshable {
                     await store.refresh()
                 }
@@ -78,14 +66,6 @@ struct InventoryView: View {
 
         let withRefresh = AnyView(
             withChrome
-                .onChange(of: hostsStore.savedHosts) {
-                    guard autoRefreshOnAppear else { return }
-                    Task { await store.refresh() }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .vibeSessionStateDidChange)) { _ in
-                    guard autoRefreshOnAppear else { return }
-                    Task { await store.refresh() }
-                }
         )
 
         let withSheets = AnyView(
