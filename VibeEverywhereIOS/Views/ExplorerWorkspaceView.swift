@@ -185,45 +185,42 @@ struct ExplorerWorkspaceView: View {
                         
                         Spacer()
                         
-                        Group{
-                            
-                            Button(role: .destructive) {
-                                Task { await explorerStore.stop(sessionViewModel) }
-                            } label: {
-                                Image(systemName: "stop.fill")
-                                    .font(.caption.weight(.bold))
-                                    .frame(width: 28, height: 24)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .tint(.red)
-                            .disabled(sessionViewModel.session.isEnded)
-                            .accessibilityLabel("Stop")
-                            
-                            Button {
-                                explorerStore.disconnect(sessionViewModel)
-                            } label: {
-                                Image(systemName: "bolt.slash")
-                                    .font(.caption.weight(.bold))
-                                    .frame(width: 28, height: 24)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .tint(.gray)
-                            .disabled(sessionViewModel.session.isEnded)
-                            .accessibilityLabel("Disconnect")
-                            
-                            Button {
-                                onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
-                            } label: {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.caption.weight(.bold))
-                                    .frame(width: 28, height: 24)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                            .tint(Color("ExplorerAccent"))
+                        Button(role: .destructive) {
+                            Task { await explorerStore.stop(sessionViewModel) }
+                        } label: {
+                            Image(systemName: "stop.fill")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 28, height: 24)
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(.red)
+                        .disabled(sessionViewModel.session.isEnded)
+                        .accessibilityLabel("Stop")
+
+                        Button {
+                            explorerStore.disconnect(sessionViewModel)
+                        } label: {
+                            Image(systemName: "bolt.slash")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 28, height: 24)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(.gray)
+                        .disabled(sessionViewModel.session.isEnded)
+                        .accessibilityLabel("Disconnect")
+
+                        Button {
+                            onFocusSession(sessionViewModel.session.sessionId, sessionViewModel.host.id)
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 28, height: 24)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .tint(Color("ExplorerAccent"))
                     }
                     
                     HStack{
@@ -258,7 +255,7 @@ struct ExplorerWorkspaceView: View {
                 mode: .preview,
                 isInputEnabled: false,
                 useCanonicalDisplay: false,
-                bootstrapBase64: nil,
+                bootstrapChunksBase64: [],
                 bootstrapToken: 0,
                 observerDimensions: sessionViewModel.observerTerminalDimensions,
                 onInput: { _ in },

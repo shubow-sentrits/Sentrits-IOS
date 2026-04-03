@@ -18,7 +18,7 @@
                BlueprintIdentifier = "A0000000000000000000002E"
                BuildableName = "VibeEverywhereIOS.app"
                BlueprintName = "VibeEverywhereIOS"
-               ReferencedContainer = "container:VibeEverywhereIOS.xcodeproj">
+               ReferencedContainer = "container:SentritsIOS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -38,7 +38,7 @@
                BlueprintIdentifier = "A00000000000000000000047"
                BuildableName = "VibeEverywhereIOSTests.xctest"
                BlueprintName = "VibeEverywhereIOSTests"
-               ReferencedContainer = "container:VibeEverywhereIOS.xcodeproj">
+               ReferencedContainer = "container:SentritsIOS.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -60,7 +60,7 @@
             BlueprintIdentifier = "A0000000000000000000002E"
             BuildableName = "VibeEverywhereIOS.app"
             BlueprintName = "VibeEverywhereIOS"
-            ReferencedContainer = "container:VibeEverywhereIOS.xcodeproj">
+            ReferencedContainer = "container:SentritsIOS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -70,16 +70,6 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A0000000000000000000002E"
-            BuildableName = "VibeEverywhereIOS.app"
-            BlueprintName = "VibeEverywhereIOS"
-            ReferencedContainer = "container:VibeEverywhereIOS.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

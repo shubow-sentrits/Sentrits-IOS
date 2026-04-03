@@ -33,6 +33,7 @@ final class SessionSocket {
         let url = host.websocketURL
             .appending(path: "/ws/sessions/\(sessionId)")
             .appending(queryItems: [URLQueryItem(name: "access_token", value: token)])
+        SentritsDebugTrace.log("ios.focus", "observer.connect", url.absoluteString)
         let request = URLRequest(url: url)
         let task = session.webSocketTask(with: request)
         self.task = task
@@ -98,9 +99,9 @@ final class SessionSocket {
 
     static func makeSession(delegate: NetworkSessionDelegate) -> URLSession {
         let configuration = URLSessionConfiguration.default
-        configuration.waitsForConnectivity = true
-        configuration.timeoutIntervalForRequest = 15
-        configuration.timeoutIntervalForResource = 60
+        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = 86_400
+        configuration.timeoutIntervalForResource = 86_400
         return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 }
@@ -130,6 +131,7 @@ final class SessionControllerSocket {
         let url = host.websocketURL
             .appending(path: "/ws/sessions/\(sessionId)/controller")
             .appending(queryItems: [URLQueryItem(name: "access_token", value: token)])
+        SentritsDebugTrace.log("ios.focus", "controller.connect", url.absoluteString)
         let request = URLRequest(url: url)
         let task = session.webSocketTask(with: request)
         self.task = task

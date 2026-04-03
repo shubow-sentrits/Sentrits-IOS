@@ -162,9 +162,11 @@ struct SessionDetailView: View {
             await viewModel.activate()
         }
         .onAppear {
+            SentritsDebugTrace.log("ios.focus", "view.appear", "session=\(viewModel.session.sessionId)")
             viewModel.setFocusedTerminalActive(true)
         }
         .onDisappear {
+            SentritsDebugTrace.log("ios.focus", "view.disappear", "session=\(viewModel.session.sessionId)")
             viewModel.setFocusedTerminalActive(false)
         }
         .onChange(of: viewModel.session.isEnded) { _, isEnded in
@@ -276,8 +278,8 @@ struct SessionDetailView: View {
                 terminal: viewModel.terminal,
                 mode: .focused,
                 isInputEnabled: viewModel.canSendInput,
-                useCanonicalDisplay: true,
-                bootstrapBase64: viewModel.terminalBootstrapBase64,
+                useCanonicalDisplay: viewModel.usesCanonicalFocusedDisplay,
+                bootstrapChunksBase64: viewModel.terminalBootstrapChunksBase64,
                 bootstrapToken: viewModel.terminalBootstrapToken,
                 observerDimensions: viewModel.canSendInput ? nil : viewModel.observerTerminalDimensions,
                 onInput: { data in
@@ -330,6 +332,7 @@ struct SessionDetailView: View {
 
             if viewModel.canSendInput {
                 Button("Release") {
+                    SentritsDebugTrace.log("ios.focus", "ui.release.tap", "session=\(viewModel.session.sessionId)")
                     Task { await viewModel.releaseControl() }
                 }
                 .font(.system(size: 12, weight: Font.Weight.bold))
@@ -348,6 +351,7 @@ struct SessionDetailView: View {
                 .frame(height: 24)
             } else {
                 Button("Request Control") {
+                    SentritsDebugTrace.log("ios.focus", "ui.request_control.tap", "session=\(viewModel.session.sessionId)")
                     Task { await viewModel.requestControl() }
                 }
                 .buttonStyle(.borderedProminent)

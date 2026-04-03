@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 struct SessionMetadata: Codable {
     let sessionId: String
@@ -197,4 +198,31 @@ enum SessionGroupTagsUpdateMode: String, Codable {
 struct TerminalResize: Equatable {
     let cols: Int
     let rows: Int
+}
+
+enum SentritsDebugTrace {
+    private static let logger = Logger(subsystem: "com.vibeeverywhere.ios", category: "SentritsDebug")
+
+    static func log(_ scope: String, _ event: String, _ details: @autoclosure () -> String) {
+#if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        let enabled = environment["SENTRITS_DEBUG_TRACE"] == "1" || environment["SENTRITS_DEBUG_TRACE"] == "true"
+        guard enabled else { return }
+        let message = details()
+        logger.debug("[\(scope, privacy: .public)][\(event, privacy: .public)] \(message, privacy: .public)")
+#else
+        _ = scope
+        _ = event
+        _ = details
+#endif
+    }
+
+    static func shouldTraceHTTP(_ path: String) -> Bool {
+#if DEBUG
+        return path.contains("/snapshot") || path.contains("/controller") || path.contains("/ws/")
+#else
+        _ = path
+        return false
+#endif
+    }
 }

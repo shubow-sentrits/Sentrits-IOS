@@ -11,7 +11,7 @@ struct TerminalTextView: UIViewRepresentable {
     let mode: Mode
     let isInputEnabled: Bool
     let useCanonicalDisplay: Bool
-    let bootstrapBase64: String?
+    let bootstrapChunksBase64: [String]
     let bootstrapToken: Int
     let observerDimensions: TerminalResize?
     let onInput: (String) -> Void
@@ -84,6 +84,7 @@ struct TerminalTextView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            SentritsDebugTrace.log("ios.focus", "renderer.didFinish", "mode=\(parent.mode == .focused ? "focused" : "preview") canonical=\(parent.useCanonicalDisplay)")
             synchronizeRendererIfNeeded()
         }
 
@@ -101,6 +102,7 @@ struct TerminalTextView: UIViewRepresentable {
                 parent.onResize(TerminalResize(cols: cols, rows: rows))
             case Self.readyHandlerName:
                 isRendererReady = true
+                SentritsDebugTrace.log("ios.focus", "renderer.ready", "mode=\(parent.mode == .focused ? "focused" : "preview") canonical=\(parent.useCanonicalDisplay)")
                 synchronizeRendererIfNeeded(forceFullReload: true)
             default:
                 break
@@ -111,6 +113,11 @@ struct TerminalTextView: UIViewRepresentable {
             guard isRendererReady, let webView else { return }
 
             if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled || lastUseCanonicalDisplay != parent.useCanonicalDisplay || lastObserverDimensions != parent.observerDimensions {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "renderer.mode",
+                    "focused=\(parent.mode == .focused) input=\(parent.isInputEnabled) canonical=\(parent.useCanonicalDisplay)"
+                )
                 evaluate("window.vibeTerminal.setMode(\(jsonString(from: modePayload())))", in: webView)
                 lastMode = parent.mode
                 lastInputEnabled = parent.isInputEnabled
@@ -119,6 +126,7 @@ struct TerminalTextView: UIViewRepresentable {
             }
 
             if forceFullReload || lastResetVersion != parent.terminal.resetVersion {
+                SentritsDebugTrace.log("ios.focus", "renderer.reset", "resetVersion=\(parent.terminal.resetVersion)")
                 evaluate("window.vibeTerminal.reset()", in: webView)
                 lastResetVersion = parent.terminal.resetVersion
                 lastRenderedChunkCount = 0
@@ -126,10 +134,17 @@ struct TerminalTextView: UIViewRepresentable {
 
             if parent.useCanonicalDisplay,
                forceFullReload || lastBootstrapToken != parent.bootstrapToken {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "renderer.bootstrap",
+                    "token=\(parent.bootstrapToken) chunks=\(parent.bootstrapChunksBase64.count)"
+                )
                 evaluate("window.vibeTerminal.reset()", in: webView)
                 lastRenderedChunkCount = 0
-                if let bootstrapBase64 = parent.bootstrapBase64, !bootstrapBase64.isEmpty {
-                    evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: [bootstrapBase64])))", in: webView)
+                if !parent.bootstrapChunksBase64.isEmpty {
+                    for batch in parent.bootstrapChunksBase64.chunked(into: 8) {
+                        evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: batch)))", in: webView)
+                    }
                 }
                 lastBootstrapToken = parent.bootstrapToken
             }
@@ -166,6 +181,21 @@ struct TerminalTextView: UIViewRepresentable {
             }
             return string
         }
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0, !isEmpty else { return isEmpty ? [] : [self] }
+        var result: [[Element]] = []
+        result.reserveCapacity((count / size) + 1)
+        var index = startIndex
+        while index < endIndex {
+            let end = self.index(index, offsetBy: size, limitedBy: endIndex) ?? endIndex
+            result.append(Array(self[index..<end]))
+            index = end
+        }
+        return result
     }
 }
 

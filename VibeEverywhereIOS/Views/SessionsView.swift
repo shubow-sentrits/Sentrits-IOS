@@ -77,13 +77,15 @@ struct SessionsView: View {
                 .presentationDetents([.height(240)])
         }
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if viewModel.hiddenSessionCount > 0 {
+            if viewModel.hiddenSessionCount > 0 {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Reconnect") {
                         viewModel.reconnectHiddenSessions()
                     }
                 }
+            }
 
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     isCreateGroupPresented = true
                 } label: {
@@ -212,7 +214,7 @@ struct SessionsView: View {
                 mode: .preview,
                 isInputEnabled: false,
                 useCanonicalDisplay: false,
-                bootstrapBase64: nil,
+                bootstrapChunksBase64: [],
                 bootstrapToken: 0,
                 observerDimensions: sessionViewModel.observerTerminalDimensions,
                 onInput: { _ in },

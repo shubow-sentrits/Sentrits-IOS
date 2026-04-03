@@ -13,7 +13,7 @@ final class SessionViewModel: ObservableObject {
     @Published var lastError: String?
     @Published var inputText = ""
     @Published var terminalResize = TerminalResize(cols: 80, rows: 24)
-    @Published var terminalBootstrapBase64: String?
+    @Published var terminalBootstrapChunksBase64: [String] = []
     @Published var terminalBootstrapToken = 0
 
     let host: SavedHost
@@ -72,7 +72,11 @@ final class SessionViewModel: ObservableObject {
     var canSendInput: Bool { controllerState == .connected }
 
     var hasRenderableTerminalContent: Bool {
-        terminalBootstrapBase64 != nil || terminal.hasContent
+        !terminalBootstrapChunksBase64.isEmpty || terminal.hasContent
+    }
+
+    var usesCanonicalFocusedDisplay: Bool {
+        !terminalBootstrapChunksBase64.isEmpty
     }
 
     var previewText: String {
@@ -138,18 +142,25 @@ final class SessionViewModel: ObservableObject {
     }
 
     func activate() async {
+        SentritsDebugTrace.log("ios.focus", "activate.begin", "session=\(session.sessionId) focused=\(focusedTerminalActive)")
         await loadSnapshot(force: false)
         connect()
+        SentritsDebugTrace.log("ios.focus", "activate.end", "session=\(session.sessionId) socket=\(String(describing: socketState))")
     }
 
     func setFocusedTerminalActive(_ active: Bool) {
         focusedTerminalActive = active
+        SentritsDebugTrace.log(
+            "ios.focus",
+            active ? "focused.activate" : "focused.deactivate",
+            "session=\(session.sessionId) bootstrapChunks=\(terminalBootstrapChunksBase64.count) hasTerminal=\(terminal.hasContent)"
+        )
         if active {
             scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         } else {
             snapshotRefreshTask?.cancel()
             snapshotRefreshTask = nil
-            terminalBootstrapBase64 = nil
+            terminalBootstrapChunksBase64 = []
         }
     }
 
@@ -167,6 +178,7 @@ final class SessionViewModel: ObservableObject {
             hostLabel: host.displayLabel,
             sessionID: session.sessionId
         )
+        SentritsDebugTrace.log("ios.focus", "control.request", "session=\(session.sessionId) resize=\(terminalResize.cols)x\(terminalResize.rows)")
         controllerSocket.connect(host: host, sessionId: session.sessionId, token: token)
     }
 
@@ -221,6 +233,11 @@ final class SessionViewModel: ObservableObject {
                 host: host,
                 token: token,
                 options: focusedTerminalActive ? currentSnapshotOptions() : nil
+            )
+            SentritsDebugTrace.log(
+                "ios.focus",
+                "snapshot.loaded",
+                "session=\(session.sessionId) focused=\(focusedTerminalActive) screen=\(snapshot.terminalScreen != nil) viewport=\(snapshot.terminalViewport != nil) bootstrap=\((snapshot.terminalViewport?.bootstrapAnsi ?? snapshot.terminalScreen?.bootstrapAnsi ?? snapshot.recentTerminalTail ?? "").count)"
             )
             self.snapshot = snapshot
             hasLoadedSnapshot = true
@@ -398,8 +415,12 @@ final class SessionViewModel: ObservableObject {
         case let .terminalOutput(output):
             guard controllerState != .connected else { return }
             if focusedTerminalActive {
-                scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
-                return
+                if usesCanonicalFocusedDisplay {
+                    SentritsDebugTrace.log("ios.focus", "observer.output.refresh", "session=\(session.sessionId) seq=\(output.seqStart)-\(output.seqEnd)")
+                    scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
+                    return
+                }
+                SentritsDebugTrace.log("ios.focus", "observer.output.raw", "session=\(session.sessionId) seq=\(output.seqStart)-\(output.seqEnd)")
             }
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
@@ -468,6 +489,11 @@ final class SessionViewModel: ObservableObject {
         switch controllerEvent {
         case let .ready(payload):
             activeControllerClientId = payload.controllerClientId
+            SentritsDebugTrace.log(
+                "ios.focus",
+                "control.ready",
+                "session=\(session.sessionId) controllerClientId=\(payload.controllerClientId ?? "nil") resize=\(terminalResize.cols)x\(terminalResize.rows)"
+            )
             activityStore.record(
                 category: .control,
                 title: "Control granted",
@@ -480,9 +506,11 @@ final class SessionViewModel: ObservableObject {
             }
             scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         case let .terminalOutput(data):
-            if focusedTerminalActive {
+            if focusedTerminalActive, usesCanonicalFocusedDisplay {
+                SentritsDebugTrace.log("ios.focus", "controller.output.refresh", "session=\(session.sessionId) bytes=\(data.count)")
                 scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
             } else {
+                SentritsDebugTrace.log("ios.focus", "controller.output.raw", "session=\(session.sessionId) bytes=\(data.count)")
                 terminal.appendBase64Raw(data.base64EncodedString())
             }
         case .released:
@@ -580,12 +608,33 @@ final class SessionViewModel: ObservableObject {
             ?? snapshot.recentTerminalTail
 
         guard let bootstrap, !bootstrap.isEmpty else {
-            terminalBootstrapBase64 = nil
+            terminalBootstrapChunksBase64 = []
+            SentritsDebugTrace.log("ios.focus", "bootstrap.missing", "session=\(session.sessionId)")
             return
         }
 
-        terminalBootstrapBase64 = Data(bootstrap.utf8).base64EncodedString()
+        terminalBootstrapChunksBase64 = Self.makeBootstrapChunks(from: bootstrap)
         terminalBootstrapToken &+= 1
+        SentritsDebugTrace.log(
+            "ios.focus",
+            "bootstrap.applied",
+            "session=\(session.sessionId) chunks=\(terminalBootstrapChunksBase64.count) chars=\(bootstrap.count) token=\(terminalBootstrapToken)"
+        )
+    }
+
+    private static func makeBootstrapChunks(from text: String) -> [String] {
+        let data = Data(text.utf8)
+        let chunkSize = 12 * 1024
+        guard !data.isEmpty else { return [] }
+        var chunks: [String] = []
+        chunks.reserveCapacity((data.count / chunkSize) + 1)
+        var index = data.startIndex
+        while index < data.endIndex {
+            let endIndex = data.index(index, offsetBy: chunkSize, limitedBy: data.endIndex) ?? data.endIndex
+            chunks.append(data[index..<endIndex].base64EncodedString())
+            index = endIndex
+        }
+        return chunks
     }
 
     private func currentSnapshotOptions() -> SnapshotRequestOptions {
@@ -607,6 +656,11 @@ final class SessionViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
 
             do {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "snapshot.refresh.request",
+                    "session=\(self.session.sessionId) delayNs=\(delayNanoseconds) resize=\(self.terminalResize.cols)x\(self.terminalResize.rows)"
+                )
                 let client = HostClient(host: self.host)
                 let snapshot = try await client.fetchSessionSnapshot(
                     sessionId: self.session.sessionId,
@@ -620,9 +674,15 @@ final class SessionViewModel: ObservableObject {
                 self.updateSession(from: snapshot)
                 self.applySnapshotToTerminal(snapshot, bootstrapCanonical: true)
                 self.lastError = nil
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "snapshot.refresh.response",
+                    "session=\(self.session.sessionId) screen=\(snapshot.terminalScreen != nil) viewport=\(snapshot.terminalViewport != nil)"
+                )
             } catch {
                 guard !Task.isCancelled else { return }
                 self.lastError = error.localizedDescription
+                SentritsDebugTrace.log("ios.focus", "snapshot.refresh.error", "session=\(self.session.sessionId) error=\(error.localizedDescription)")
             }
         }
     }

@@ -40,7 +40,18 @@
 		A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000063 /* ExplorerWorkspaceView.swift */; };
 		A00000000000000000000064 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000065 /* Assets.xcassets */; };
 		A00000000000000000000066 /* SessionBadgeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000067 /* SessionBadgeSupport.swift */; };
+		A00000000000000000000068 /* ActivityLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000069 /* ActivityLogTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A0000000000000000000006F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000032 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A0000000000000000000002E;
+			remoteInfo = VibeEverywhereIOS;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A00000000000000000000011 /* SentritsIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentritsIOSApp.swift; sourceTree = "<group>"; };
@@ -78,10 +89,19 @@
 		A00000000000000000000063 /* ExplorerWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerWorkspaceView.swift; sourceTree = "<group>"; };
 		A00000000000000000000065 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A00000000000000000000067 /* SessionBadgeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionBadgeSupport.swift; sourceTree = "<group>"; };
+		A00000000000000000000069 /* ActivityLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000006A /* VibeEverywhereIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = VibeEverywhereIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A00000000000000000000025 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0000000000000000000006B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -95,7 +115,9 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000027 /* VibeEverywhereIOS */,
+				A0000000000000000000006C /* VibeEverywhereIOSTests */,
 				A00000000000000000000023 /* VibeEverywhereIOS.app */,
+				A0000000000000000000006A /* VibeEverywhereIOSTests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -196,6 +218,14 @@
 			path = Terminal;
 			sourceTree = "<group>";
 		};
+		A0000000000000000000006C /* VibeEverywhereIOSTests */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000069 /* ActivityLogTests.swift */,
+			);
+			path = VibeEverywhereIOSTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -216,6 +246,23 @@
 			productReference = A00000000000000000000023 /* VibeEverywhereIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A00000000000000000000047 /* VibeEverywhereIOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000072 /* Build configuration list for PBXNativeTarget "VibeEverywhereIOSTests" */;
+			buildPhases = (
+				A0000000000000000000006D /* Sources */,
+				A0000000000000000000006B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A00000000000000000000071 /* PBXTargetDependency */,
+			);
+			name = VibeEverywhereIOSTests;
+			productName = VibeEverywhereIOSTests;
+			productReference = A0000000000000000000006A /* VibeEverywhereIOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -229,9 +276,13 @@
 					A0000000000000000000002E = {
 						CreatedOnToolsVersion = 26.3;
 					};
+					A00000000000000000000047 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = A0000000000000000000002E;
+					};
 				};
 			};
-			buildConfigurationList = A00000000000000000000033 /* Build configuration list for PBXProject "VibeEverywhereIOS" */;
+			buildConfigurationList = A00000000000000000000033 /* Build configuration list for PBXProject "SentritsIOS" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -246,6 +297,7 @@
 			projectRoot = "";
 			targets = (
 				A0000000000000000000002E /* VibeEverywhereIOS */,
+				A00000000000000000000047 /* VibeEverywhereIOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -301,7 +353,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A0000000000000000000006D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000068 /* ActivityLogTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000071 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A0000000000000000000002E /* VibeEverywhereIOS */;
+			targetProxy = A0000000000000000000006F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A00000000000000000000034 /* Debug */ = {
@@ -454,6 +522,54 @@
 			};
 			name = Release;
 		};
+		A0000000000000000000006E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibeeverywhere.iosTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeEverywhereIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/VibeEverywhereIOS";
+			};
+			name = Debug;
+		};
+		A00000000000000000000070 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibeeverywhere.iosTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeEverywhereIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/VibeEverywhereIOS";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -466,11 +582,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A00000000000000000000033 /* Build configuration list for PBXProject "VibeEverywhereIOS" */ = {
+		A00000000000000000000033 /* Build configuration list for PBXProject "SentritsIOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A00000000000000000000036 /* Debug */,
 				A00000000000000000000037 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000072 /* Build configuration list for PBXNativeTarget "VibeEverywhereIOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0000000000000000000006E /* Debug */,
+				A00000000000000000000070 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

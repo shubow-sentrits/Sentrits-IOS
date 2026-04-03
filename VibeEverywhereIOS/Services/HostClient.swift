@@ -115,12 +115,16 @@ actor HostClient {
         token: String,
         options: SnapshotRequestOptions? = nil
     ) async throws -> SessionSnapshot {
-        var path = "/sessions/\(sessionId)/snapshot"
+        let path = "/sessions/\(sessionId)/snapshot"
+        var queryItems: [URLQueryItem] = []
         if let options {
-            let viewId = options.viewId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? options.viewId
-            path += "?viewId=\(viewId)&cols=\(options.cols)&rows=\(options.rows)"
+            queryItems = [
+                URLQueryItem(name: "viewId", value: options.viewId),
+                URLQueryItem(name: "cols", value: String(options.cols)),
+                URLQueryItem(name: "rows", value: String(options.rows))
+            ]
         }
-        return try await requestJSON(path: path, endpoint: host.endpoint, token: token, method: "GET")
+        return try await requestJSON(path: path, endpoint: host.endpoint, token: token, method: "GET", queryItems: queryItems)
     }
 
     func updateSessionGroupTags(
@@ -171,9 +175,10 @@ actor HostClient {
         path: String,
         endpoint: HostEndpoint,
         token: String?,
-        method: String
+        method: String,
+        queryItems: [URLQueryItem] = []
     ) async throws -> Response {
-        let (data, response) = try await requestData(path: path, endpoint: endpoint, token: token, method: method, bodyData: nil)
+        let (data, response) = try await requestData(path: path, endpoint: endpoint, token: token, method: method, bodyData: nil, queryItems: queryItems)
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
@@ -211,11 +216,22 @@ actor HostClient {
         token: String?,
         method: String,
         bodyData: Data?,
+        queryItems: [URLQueryItem] = [],
         acceptedStatusCodes: Set<Int> = Set(200 ... 299)
     ) async throws -> (Data, HTTPURLResponse) {
-        var request = URLRequest(url: endpoint.baseURL.appending(path: path))
+        var components = URLComponents(url: endpoint.baseURL.appending(path: path), resolvingAgainstBaseURL: false)
+        if !queryItems.isEmpty {
+            components?.queryItems = queryItems
+        }
+        guard let url = components?.url else {
+            throw APIError.invalidResponse
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 10
+        request.timeoutInterval = 30
+        if SentritsDebugTrace.shouldTraceHTTP(path) {
+            SentritsDebugTrace.log("ios.focus", "http.request", "\(method) \(request.url?.absoluteString ?? path)")
+        }
         if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -230,16 +246,22 @@ actor HostClient {
         }
         guard acceptedStatusCodes.contains(httpResponse.statusCode) else {
             let body = String(decoding: data, as: UTF8.self)
+            if SentritsDebugTrace.shouldTraceHTTP(path) {
+                SentritsDebugTrace.log("ios.focus", "http.error", "\(method) \(request.url?.absoluteString ?? path) status=\(httpResponse.statusCode)")
+            }
             throw APIError.httpStatus(httpResponse.statusCode, body)
+        }
+        if SentritsDebugTrace.shouldTraceHTTP(path) {
+            SentritsDebugTrace.log("ios.focus", "http.response", "\(method) \(request.url?.absoluteString ?? path) status=\(httpResponse.statusCode) bytes=\(data.count)")
         }
         return (data, httpResponse)
     }
 
     private static func makeSession(delegate: NetworkSessionDelegate) -> URLSession {
         let configuration = URLSessionConfiguration.default
-        configuration.waitsForConnectivity = true
-        configuration.timeoutIntervalForRequest = 15
-        configuration.timeoutIntervalForResource = 60
+        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 300
         return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 }
