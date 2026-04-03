@@ -1,6 +1,12 @@
 import Foundation
 import os
 
+struct SnapshotRequestOptions {
+    let viewId: String
+    let cols: Int
+    let rows: Int
+}
+
 final class NetworkSessionDelegate: NSObject, URLSessionDelegate {
     private let allowSelfSignedTLS: Bool
 
@@ -103,8 +109,18 @@ actor HostClient {
         try await requestJSON(path: "/sessions", endpoint: host.endpoint, token: token, method: "GET")
     }
 
-    func fetchSessionSnapshot(sessionId: String, host: SavedHost, token: String) async throws -> SessionSnapshot {
-        try await requestJSON(path: "/sessions/\(sessionId)/snapshot", endpoint: host.endpoint, token: token, method: "GET")
+    func fetchSessionSnapshot(
+        sessionId: String,
+        host: SavedHost,
+        token: String,
+        options: SnapshotRequestOptions? = nil
+    ) async throws -> SessionSnapshot {
+        var path = "/sessions/\(sessionId)/snapshot"
+        if let options {
+            let viewId = options.viewId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? options.viewId
+            path += "?viewId=\(viewId)&cols=\(options.cols)&rows=\(options.rows)"
+        }
+        return try await requestJSON(path: path, endpoint: host.endpoint, token: token, method: "GET")
     }
 
     func updateSessionGroupTags(

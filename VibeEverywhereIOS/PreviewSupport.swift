@@ -146,6 +146,8 @@ enum PreviewFixtures {
         groupTags: sessionA.groupTags,
         currentSequence: sessionA.currentSequence,
         recentTerminalTail: "$ ninja -C build\n[1/4] Building runtime\n[2/4] Linking vibe-hostd\nReady for smoke\n",
+        terminalScreen: nil,
+        terminalViewport: nil,
         recentFileChanges: [
             "src/net/http_shared.cpp",
             "web/remote_client/app.js",

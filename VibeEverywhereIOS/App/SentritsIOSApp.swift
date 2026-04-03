@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct VibeEverywhereIOSApp: App {
+struct SentritsIOSApp: App {
     private let tokenStore: TokenStore
     @StateObject private var hostsStore: HostsStore
     @StateObject private var activityStore = ActivityLogStore()

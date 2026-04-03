@@ -257,6 +257,9 @@ struct ExplorerWorkspaceView: View {
                 terminal: sessionViewModel.terminal,
                 mode: .preview,
                 isInputEnabled: false,
+                useCanonicalDisplay: false,
+                bootstrapBase64: nil,
+                bootstrapToken: 0,
                 observerDimensions: sessionViewModel.observerTerminalDimensions,
                 onInput: { _ in },
                 onResize: { _ in }

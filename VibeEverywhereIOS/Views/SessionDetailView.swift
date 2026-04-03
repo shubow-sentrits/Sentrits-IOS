@@ -161,6 +161,12 @@ struct SessionDetailView: View {
             guard autoActivate else { return }
             await viewModel.activate()
         }
+        .onAppear {
+            viewModel.setFocusedTerminalActive(true)
+        }
+        .onDisappear {
+            viewModel.setFocusedTerminalActive(false)
+        }
         .onChange(of: viewModel.session.isEnded) { _, isEnded in
             guard isEnded else { return }
             onSessionEnded?()
@@ -270,17 +276,20 @@ struct SessionDetailView: View {
                 terminal: viewModel.terminal,
                 mode: .focused,
                 isInputEnabled: viewModel.canSendInput,
+                useCanonicalDisplay: true,
+                bootstrapBase64: viewModel.terminalBootstrapBase64,
+                bootstrapToken: viewModel.terminalBootstrapToken,
                 observerDimensions: viewModel.canSendInput ? nil : viewModel.observerTerminalDimensions,
                 onInput: { data in
                     Task { await viewModel.sendTerminalInput(data) }
                 },
                 onResize: { resize in
-                    Task { await viewModel.sendResizeIfChanged(resize) }
+                    Task { await viewModel.handleFocusedTerminalResize(resize) }
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-            if !viewModel.terminal.hasContent {
+            if !viewModel.hasRenderableTerminalContent {
                 Text("Waiting for terminal output...")
                     .font(.footnote)
                     .foregroundStyle(Color("FocusedMuted"))

@@ -10,6 +10,9 @@ struct TerminalTextView: UIViewRepresentable {
     @ObservedObject var terminal: TerminalEngine
     let mode: Mode
     let isInputEnabled: Bool
+    let useCanonicalDisplay: Bool
+    let bootstrapBase64: String?
+    let bootstrapToken: Int
     let observerDimensions: TerminalResize?
     let onInput: (String) -> Void
     let onResize: (TerminalResize) -> Void
@@ -61,7 +64,9 @@ struct TerminalTextView: UIViewRepresentable {
         private var lastRenderedChunkCount = 0
         private var lastInputEnabled: Bool?
         private var lastMode: Mode?
+        private var lastUseCanonicalDisplay: Bool?
         private var lastObserverDimensions: TerminalResize?
+        private var lastBootstrapToken = -1
 
         init(parent: TerminalTextView) {
             self.parent = parent
@@ -105,10 +110,11 @@ struct TerminalTextView: UIViewRepresentable {
         func synchronizeRendererIfNeeded(forceFullReload: Bool = false) {
             guard isRendererReady, let webView else { return }
 
-            if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled || lastObserverDimensions != parent.observerDimensions {
+            if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled || lastUseCanonicalDisplay != parent.useCanonicalDisplay || lastObserverDimensions != parent.observerDimensions {
                 evaluate("window.vibeTerminal.setMode(\(jsonString(from: modePayload())))", in: webView)
                 lastMode = parent.mode
                 lastInputEnabled = parent.isInputEnabled
+                lastUseCanonicalDisplay = parent.useCanonicalDisplay
                 lastObserverDimensions = parent.observerDimensions
             }
 
@@ -116,6 +122,20 @@ struct TerminalTextView: UIViewRepresentable {
                 evaluate("window.vibeTerminal.reset()", in: webView)
                 lastResetVersion = parent.terminal.resetVersion
                 lastRenderedChunkCount = 0
+            }
+
+            if parent.useCanonicalDisplay,
+               forceFullReload || lastBootstrapToken != parent.bootstrapToken {
+                evaluate("window.vibeTerminal.reset()", in: webView)
+                lastRenderedChunkCount = 0
+                if let bootstrapBase64 = parent.bootstrapBase64, !bootstrapBase64.isEmpty {
+                    evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: [bootstrapBase64])))", in: webView)
+                }
+                lastBootstrapToken = parent.bootstrapToken
+            }
+
+            if parent.useCanonicalDisplay {
+                return
             }
 
             guard parent.terminal.outputChunksBase64.count > lastRenderedChunkCount else { return }
@@ -128,9 +148,9 @@ struct TerminalTextView: UIViewRepresentable {
             TerminalModePayload(
                 mode: parent.mode == .focused ? "focused" : "preview",
                 inputEnabled: parent.isInputEnabled,
-                reportResize: parent.isInputEnabled,
-                fixedCols: parent.isInputEnabled ? nil : parent.observerDimensions?.cols,
-                fixedRows: parent.isInputEnabled ? nil : parent.observerDimensions?.rows
+                reportResize: parent.mode == .focused || parent.isInputEnabled,
+                fixedCols: parent.mode == .preview && !parent.isInputEnabled ? parent.observerDimensions?.cols : nil,
+                fixedRows: parent.mode == .preview && !parent.isInputEnabled ? parent.observerDimensions?.rows : nil
             )
         }
 

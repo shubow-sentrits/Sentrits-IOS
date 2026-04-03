@@ -13,6 +13,8 @@ final class SessionViewModel: ObservableObject {
     @Published var lastError: String?
     @Published var inputText = ""
     @Published var terminalResize = TerminalResize(cols: 80, rows: 24)
+    @Published var terminalBootstrapBase64: String?
+    @Published var terminalBootstrapToken = 0
 
     let host: SavedHost
     let token: String
@@ -23,6 +25,8 @@ final class SessionViewModel: ObservableObject {
     private let activityStore: ActivityLogStore
     private var hasLoadedSnapshot = false
     private var activeControllerClientId: String?
+    private var focusedTerminalActive = false
+    private var snapshotRefreshTask: Task<Void, Never>?
 
     init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
@@ -66,6 +70,10 @@ final class SessionViewModel: ObservableObject {
     var hasRemoteControl: Bool { session.controllerKind == "remote" && session.controllerClientId != nil }
 
     var canSendInput: Bool { controllerState == .connected }
+
+    var hasRenderableTerminalContent: Bool {
+        terminalBootstrapBase64 != nil || terminal.hasContent
+    }
 
     var previewText: String {
         let lines = terminal.renderedText
@@ -134,6 +142,17 @@ final class SessionViewModel: ObservableObject {
         connect()
     }
 
+    func setFocusedTerminalActive(_ active: Bool) {
+        focusedTerminalActive = active
+        if active {
+            scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
+        } else {
+            snapshotRefreshTask?.cancel()
+            snapshotRefreshTask = nil
+            terminalBootstrapBase64 = nil
+        }
+    }
+
     func requestControl() async {
         if case .connected = controllerState {
             return
@@ -180,6 +199,16 @@ final class SessionViewModel: ObservableObject {
         await controllerSocket.sendResize(resize)
     }
 
+    func handleFocusedTerminalResize(_ resize: TerminalResize) async {
+        let changed = resize != terminalResize
+        terminalResize = resize
+        guard changed else { return }
+        if canSendInput {
+            await controllerSocket.sendResize(resize)
+        }
+        scheduleFocusedSnapshotRefresh(delayNanoseconds: canSendInput ? 120_000_000 : 60_000_000)
+    }
+
     func loadSnapshot(force: Bool) async {
         if hasLoadedSnapshot, !force {
             return
@@ -187,11 +216,16 @@ final class SessionViewModel: ObservableObject {
 
         do {
             let client = HostClient(host: host)
-            let snapshot = try await client.fetchSessionSnapshot(sessionId: session.sessionId, host: host, token: token)
+            let snapshot = try await client.fetchSessionSnapshot(
+                sessionId: session.sessionId,
+                host: host,
+                token: token,
+                options: focusedTerminalActive ? currentSnapshotOptions() : nil
+            )
             self.snapshot = snapshot
             hasLoadedSnapshot = true
             updateSession(from: snapshot)
-            seedTerminalFromSnapshot()
+            applySnapshotToTerminal(snapshot, bootstrapCanonical: focusedTerminalActive)
             lastError = nil
         } catch {
             lastError = error.localizedDescription
@@ -363,6 +397,10 @@ final class SessionViewModel: ObservableObject {
             publishSessionStateChanged()
         case let .terminalOutput(output):
             guard controllerState != .connected else { return }
+            if focusedTerminalActive {
+                scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
+                return
+            }
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
             controllerSocket.disconnect(reason: "Session exited.")
@@ -440,8 +478,13 @@ final class SessionViewModel: ObservableObject {
             Task {
                 await controllerSocket.sendResize(terminalResize)
             }
+            scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         case let .terminalOutput(data):
-            terminal.appendBase64Raw(data.base64EncodedString())
+            if focusedTerminalActive {
+                scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
+            } else {
+                terminal.appendBase64Raw(data.base64EncodedString())
+            }
         case .released:
             activityStore.record(
                 category: .control,
@@ -450,6 +493,7 @@ final class SessionViewModel: ObservableObject {
                 hostLabel: host.displayLabel,
                 sessionID: session.sessionId
             )
+            scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         case let .rejected(payload):
             lastError = "\(payload.code): \(payload.message)"
             activityStore.record(
@@ -523,6 +567,64 @@ final class SessionViewModel: ObservableObject {
             return
         }
         terminal.ingestBase64(Data(tail.utf8).base64EncodedString(), seqEnd: snapshot?.currentSequence ?? 0)
+    }
+
+    private func applySnapshotToTerminal(_ snapshot: SessionSnapshot, bootstrapCanonical: Bool) {
+        guard bootstrapCanonical else {
+            seedTerminalFromSnapshot()
+            return
+        }
+
+        let bootstrap = snapshot.terminalViewport?.bootstrapAnsi
+            ?? snapshot.terminalScreen?.bootstrapAnsi
+            ?? snapshot.recentTerminalTail
+
+        guard let bootstrap, !bootstrap.isEmpty else {
+            terminalBootstrapBase64 = nil
+            return
+        }
+
+        terminalBootstrapBase64 = Data(bootstrap.utf8).base64EncodedString()
+        terminalBootstrapToken &+= 1
+    }
+
+    private func currentSnapshotOptions() -> SnapshotRequestOptions {
+        SnapshotRequestOptions(
+            viewId: "ios-focused-\(session.sessionId)",
+            cols: terminalResize.cols,
+            rows: terminalResize.rows
+        )
+    }
+
+    private func scheduleFocusedSnapshotRefresh(delayNanoseconds: UInt64) {
+        guard focusedTerminalActive else { return }
+        snapshotRefreshTask?.cancel()
+        snapshotRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            if delayNanoseconds > 0 {
+                try? await Task.sleep(nanoseconds: delayNanoseconds)
+            }
+            guard !Task.isCancelled else { return }
+
+            do {
+                let client = HostClient(host: self.host)
+                let snapshot = try await client.fetchSessionSnapshot(
+                    sessionId: self.session.sessionId,
+                    host: self.host,
+                    token: self.token,
+                    options: self.currentSnapshotOptions()
+                )
+                guard !Task.isCancelled else { return }
+                self.snapshot = snapshot
+                self.hasLoadedSnapshot = true
+                self.updateSession(from: snapshot)
+                self.applySnapshotToTerminal(snapshot, bootstrapCanonical: true)
+                self.lastError = nil
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.lastError = error.localizedDescription
+            }
+        }
     }
 
     private func recordSocketState(_ state: SessionSocket.ConnectionState, title: String) {

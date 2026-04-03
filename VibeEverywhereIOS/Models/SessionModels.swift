@@ -120,9 +120,36 @@ struct SessionSnapshot: Codable {
     let groupTags: [String]
     let currentSequence: Int?
     let recentTerminalTail: String?
+    let terminalScreen: SessionTerminalScreenSnapshot?
+    let terminalViewport: SessionTerminalViewportSnapshot?
     let recentFileChanges: [String]
     let signals: SessionSnapshotSignals?
     let git: SessionSnapshotGit?
+}
+
+struct SessionTerminalScreenSnapshot: Codable {
+    let ptyCols: Int?
+    let ptyRows: Int?
+    let renderRevision: Int?
+    let cursorRow: Int?
+    let cursorColumn: Int?
+    let visibleLines: [String]?
+    let scrollbackLines: [String]?
+    let bootstrapAnsi: String?
+}
+
+struct SessionTerminalViewportSnapshot: Codable {
+    let viewId: String?
+    let cols: Int?
+    let rows: Int?
+    let renderRevision: Int?
+    let totalLineCount: Int?
+    let viewportTopLine: Int?
+    let horizontalOffset: Int?
+    let cursorRow: Int?
+    let cursorColumn: Int?
+    let visibleLines: [String]?
+    let bootstrapAnsi: String?
 }
 
 struct SessionSnapshotSignals: Codable {
