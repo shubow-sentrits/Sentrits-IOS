@@ -70,6 +70,7 @@
     let inputEnabled = false;
     let lastReportedCols = 0;
     let lastReportedRows = 0;
+    let activeBootstrapToken = 0;
     let modeState = {
       reportResize: false,
       fixedCols: 0,
@@ -133,6 +134,28 @@
       });
     }
 
+    function applyTerminalSizing() {
+      if (!modeState.reportResize && modeState.fixedCols > 0 && modeState.fixedRows > 0) {
+        terminal.resize(modeState.fixedCols, modeState.fixedRows);
+        lastReportedCols = modeState.fixedCols;
+        lastReportedRows = modeState.fixedRows;
+        return;
+      }
+      fitAndReport();
+    }
+
+    function writeChunksSequentially(token, chunks, index = 0) {
+      if (token !== activeBootstrapToken) {
+        return;
+      }
+      if (index >= chunks.length) {
+        return;
+      }
+      terminal.write(decodeBase64(chunks[index]), () => {
+        writeChunksSequentially(token, chunks, index + 1);
+      });
+    }
+
     terminal.onData((data) => {
       if (inputEnabled) {
         postMessage('terminalInput', data);
@@ -150,13 +173,17 @@
       setMode,
       reset() {
         terminal.reset();
-        if (!modeState.reportResize && modeState.fixedCols > 0 && modeState.fixedRows > 0) {
-          terminal.resize(modeState.fixedCols, modeState.fixedRows);
-          lastReportedCols = modeState.fixedCols;
-          lastReportedRows = modeState.fixedRows;
+        activeBootstrapToken += 1;
+        applyTerminalSizing();
+      },
+      replaceBase64Chunks(token, chunks) {
+        activeBootstrapToken = Number(token || 0);
+        terminal.reset();
+        applyTerminalSizing();
+        if (!Array.isArray(chunks) || chunks.length === 0) {
           return;
         }
-        fitAndReport();
+        writeChunksSequentially(activeBootstrapToken, chunks, 0);
       },
       appendBase64Chunks(chunks) {
         for (const chunk of chunks) {

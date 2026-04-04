@@ -139,13 +139,11 @@ struct TerminalTextView: UIViewRepresentable {
                     "renderer.bootstrap",
                     "token=\(parent.bootstrapToken) chunks=\(parent.bootstrapChunksBase64.count)"
                 )
-                evaluate("window.vibeTerminal.reset()", in: webView)
                 lastRenderedChunkCount = 0
-                if !parent.bootstrapChunksBase64.isEmpty {
-                    for batch in parent.bootstrapChunksBase64.chunked(into: 8) {
-                        evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: batch)))", in: webView)
-                    }
-                }
+                evaluate(
+                    "window.vibeTerminal.replaceBase64Chunks(\(parent.bootstrapToken), \(jsonString(from: parent.bootstrapChunksBase64)))",
+                    in: webView
+                )
                 lastBootstrapToken = parent.bootstrapToken
             }
 

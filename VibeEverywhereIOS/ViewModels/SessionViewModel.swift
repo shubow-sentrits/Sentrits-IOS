@@ -27,6 +27,10 @@ final class SessionViewModel: ObservableObject {
     private var activeControllerClientId: String?
     private var focusedTerminalActive = false
     private var snapshotRefreshTask: Task<Void, Never>?
+    private var pendingSnapshotRefresh = false
+    private var pendingSnapshotRefreshDelayNanoseconds: UInt64 = 0
+    private var lastSnapshotRefreshStartedAt: ContinuousClock.Instant?
+    private let refreshClock = ContinuousClock()
 
     init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
@@ -76,7 +80,7 @@ final class SessionViewModel: ObservableObject {
     }
 
     var usesCanonicalFocusedDisplay: Bool {
-        !terminalBootstrapChunksBase64.isEmpty
+        !canSendInput && !terminalBootstrapChunksBase64.isEmpty
     }
 
     var previewText: String {
@@ -143,7 +147,9 @@ final class SessionViewModel: ObservableObject {
 
     func activate() async {
         SentritsDebugTrace.log("ios.focus", "activate.begin", "session=\(session.sessionId) focused=\(focusedTerminalActive)")
-        await loadSnapshot(force: false)
+        if !focusedTerminalActive {
+            await loadSnapshot(force: false)
+        }
         connect()
         SentritsDebugTrace.log("ios.focus", "activate.end", "session=\(session.sessionId) socket=\(String(describing: socketState))")
     }
@@ -504,15 +510,9 @@ final class SessionViewModel: ObservableObject {
             Task {
                 await controllerSocket.sendResize(terminalResize)
             }
-            scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         case let .terminalOutput(data):
-            if focusedTerminalActive, usesCanonicalFocusedDisplay {
-                SentritsDebugTrace.log("ios.focus", "controller.output.refresh", "session=\(session.sessionId) bytes=\(data.count)")
-                scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
-            } else {
-                SentritsDebugTrace.log("ios.focus", "controller.output.raw", "session=\(session.sessionId) bytes=\(data.count)")
-                terminal.appendBase64Raw(data.base64EncodedString())
-            }
+            SentritsDebugTrace.log("ios.focus", "controller.output.raw", "session=\(session.sessionId) bytes=\(data.count)")
+            terminal.appendBase64Raw(data.base64EncodedString())
         case .released:
             activityStore.record(
                 category: .control,
@@ -603,8 +603,8 @@ final class SessionViewModel: ObservableObject {
             return
         }
 
-        let bootstrap = snapshot.terminalViewport?.bootstrapAnsi
-            ?? snapshot.terminalScreen?.bootstrapAnsi
+        let bootstrap = Self.buildViewportBootstrap(snapshot.terminalViewport, screen: snapshot.terminalScreen)
+            ?? Self.buildScreenBootstrap(snapshot.terminalScreen)
             ?? snapshot.recentTerminalTail
 
         guard let bootstrap, !bootstrap.isEmpty else {
@@ -613,7 +613,13 @@ final class SessionViewModel: ObservableObject {
             return
         }
 
-        terminalBootstrapChunksBase64 = Self.makeBootstrapChunks(from: bootstrap)
+        let nextChunks = Self.makeBootstrapChunks(from: bootstrap)
+        guard nextChunks != terminalBootstrapChunksBase64 else {
+            SentritsDebugTrace.log("ios.focus", "bootstrap.unchanged", "session=\(session.sessionId) chunks=\(nextChunks.count)")
+            return
+        }
+
+        terminalBootstrapChunksBase64 = nextChunks
         terminalBootstrapToken &+= 1
         SentritsDebugTrace.log(
             "ios.focus",
@@ -637,6 +643,82 @@ final class SessionViewModel: ObservableObject {
         return chunks
     }
 
+    private static func buildScreenBootstrap(_ screen: SessionTerminalScreenSnapshot?) -> String? {
+        guard let screen else { return nil }
+        if let bootstrapAnsi = screen.bootstrapAnsi, !bootstrapAnsi.isEmpty {
+            return bootstrapAnsi
+        }
+
+        let scrollback = screen.scrollbackLines ?? []
+        let visible = screen.visibleLines ?? []
+        let cursorRow = max(0, screen.cursorRow ?? 0)
+        let cursorColumn = max(0, screen.cursorColumn ?? 0)
+
+        var chunks: [String] = []
+        if !scrollback.isEmpty {
+            chunks.append(scrollback.joined(separator: "\r\n"))
+            chunks.append("\r\n")
+        }
+
+        chunks.append("\u{1B}[2J\u{1B}[H")
+        for index in visible.indices {
+            chunks.append(visible[index])
+            if index < visible.count - 1 {
+                chunks.append("\u{1B}[E")
+            }
+        }
+        chunks.append("\u{1B}[\(cursorRow + 1);\(cursorColumn + 1)H")
+        return chunks.joined()
+    }
+
+    private static func buildViewportBootstrap(
+        _ viewport: SessionTerminalViewportSnapshot?,
+        screen: SessionTerminalScreenSnapshot?
+    ) -> String? {
+        guard let viewport else { return nil }
+        if let bootstrapAnsi = viewport.bootstrapAnsi, !bootstrapAnsi.isEmpty {
+            return bootstrapAnsi
+        }
+
+        let visible = viewport.visibleLines ?? []
+        let cursorRow = max(0, viewport.cursorRow ?? 0)
+        let cursorColumn = max(0, viewport.cursorColumn ?? 0)
+        let viewportTopLine = max(0, viewport.viewportTopLine ?? 0)
+        let horizontalOffset = max(0, viewport.horizontalOffset ?? 0)
+        let cols = max(0, viewport.cols ?? 0)
+        let allLines = (screen?.scrollbackLines ?? []) + (screen?.visibleLines ?? [])
+
+        var chunks: [String] = []
+        if viewportTopLine > 0, !allLines.isEmpty {
+            let history = allLines
+                .prefix(min(viewportTopLine, allLines.count))
+                .map { clipColumns($0, startColumn: horizontalOffset, maxColumns: cols > 0 ? cols : Int.max) }
+            if !history.isEmpty {
+                chunks.append(history.joined(separator: "\r\n"))
+                chunks.append("\r\n")
+            }
+        }
+
+        chunks.append("\u{1B}[2J\u{1B}[H")
+        for index in visible.indices {
+            chunks.append(visible[index])
+            if index < visible.count - 1 {
+                chunks.append("\u{1B}[E")
+            }
+        }
+        chunks.append("\u{1B}[\(cursorRow + 1);\(cursorColumn + 1)H")
+        return chunks.joined()
+    }
+
+    private static func clipColumns(_ line: String, startColumn: Int, maxColumns: Int) -> String {
+        guard !line.isEmpty, maxColumns > 0 else { return "" }
+        let scalars = Array(line)
+        let start = max(0, startColumn)
+        guard start < scalars.count else { return "" }
+        let end = min(scalars.count, start + maxColumns)
+        return String(scalars[start..<end])
+    }
+
     private func currentSnapshotOptions() -> SnapshotRequestOptions {
         SnapshotRequestOptions(
             viewId: "ios-focused-\(session.sessionId)",
@@ -647,19 +729,67 @@ final class SessionViewModel: ObservableObject {
 
     private func scheduleFocusedSnapshotRefresh(delayNanoseconds: UInt64) {
         guard focusedTerminalActive else { return }
-        snapshotRefreshTask?.cancel()
-        snapshotRefreshTask = Task { [weak self] in
-            guard let self else { return }
-            if delayNanoseconds > 0 {
-                try? await Task.sleep(nanoseconds: delayNanoseconds)
+        pendingSnapshotRefresh = true
+        if !snapshotRefreshTaskIsActive {
+            pendingSnapshotRefreshDelayNanoseconds = delayNanoseconds
+            snapshotRefreshTask = Task { [weak self] in
+                await self?.runFocusedSnapshotRefreshLoop()
             }
-            guard !Task.isCancelled else { return }
+            return
+        }
+
+        if pendingSnapshotRefreshDelayNanoseconds == 0 {
+            return
+        }
+        if delayNanoseconds == 0 {
+            pendingSnapshotRefreshDelayNanoseconds = 0
+        } else if pendingSnapshotRefreshDelayNanoseconds == 0 {
+            pendingSnapshotRefreshDelayNanoseconds = delayNanoseconds
+        } else {
+            pendingSnapshotRefreshDelayNanoseconds = min(pendingSnapshotRefreshDelayNanoseconds, delayNanoseconds)
+        }
+    }
+
+    private var snapshotRefreshTaskIsActive: Bool {
+        snapshotRefreshTask != nil
+    }
+
+    private func runFocusedSnapshotRefreshLoop() async {
+        defer {
+            snapshotRefreshTask = nil
+        }
+
+        while focusedTerminalActive {
+            guard pendingSnapshotRefresh else { break }
+            pendingSnapshotRefresh = false
+            let requestedDelay = pendingSnapshotRefreshDelayNanoseconds
+            pendingSnapshotRefreshDelayNanoseconds = 0
+
+            if requestedDelay > 0 {
+                try? await Task.sleep(nanoseconds: requestedDelay)
+            }
+            guard !Task.isCancelled, focusedTerminalActive else { return }
+
+            let minimumIntervalNanoseconds: UInt64 = canSendInput ? 140_000_000 : 90_000_000
+            if let lastStartedAt = lastSnapshotRefreshStartedAt {
+                let elapsed = lastStartedAt.duration(to: refreshClock.now)
+                let elapsedNanoseconds = UInt64(max(0, elapsed.components.seconds)) * 1_000_000_000
+                    + UInt64(max(0, elapsed.components.attoseconds / 1_000_000_000))
+                if elapsedNanoseconds < minimumIntervalNanoseconds {
+                    let remaining = minimumIntervalNanoseconds - elapsedNanoseconds
+                    SentritsDebugTrace.log("ios.focus", "snapshot.refresh.coalesce", "session=\(session.sessionId) remainingNs=\(remaining)")
+                    try? await Task.sleep(nanoseconds: remaining)
+                }
+            }
+            guard !Task.isCancelled, focusedTerminalActive else { return }
+
+            lastSnapshotRefreshStartedAt = refreshClock.now
 
             do {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "snapshot.refresh.request",
-                    "session=\(self.session.sessionId) delayNs=\(delayNanoseconds) resize=\(self.terminalResize.cols)x\(self.terminalResize.rows)"
+                    "session=\(self.session.sessionId) delayNs=\(requestedDelay) resize=\(self.terminalResize.cols)x\(self.terminalResize.rows)"
                 )
                 let client = HostClient(host: self.host)
                 let snapshot = try await client.fetchSessionSnapshot(
