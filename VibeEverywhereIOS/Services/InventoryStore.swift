@@ -91,6 +91,7 @@ final class InventoryStore: ObservableObject {
     }
 
     func refresh() async {
+        SentritsDebugTrace.log("ios.inventory", "refresh.begin", "hosts=\(hostsStore.savedHosts.count)")
         isRefreshing = true
         defer { isRefreshing = false }
 
@@ -99,10 +100,12 @@ final class InventoryStore: ObservableObject {
 
         for host in hostsStore.savedHosts {
             let token = hostsStore.token(for: host)
+            let hostIdentity = "host=\(host.displayLabel) id=\(host.id.uuidString) endpoint=\(host.address):\(host.port)"
             guard let token else {
                 nextSections.append(
                     InventoryDeviceSection(host: host, token: nil, sessions: [], hostInfo: nil, errorMessage: nil)
                 )
+                SentritsDebugTrace.log("ios.inventory", "refresh.host.missing_token", hostIdentity)
                 continue
             }
 
@@ -110,15 +113,33 @@ final class InventoryStore: ObservableObject {
                 let client = HostClient(host: host)
                 async let hostInfo = client.fetchHostInfo(for: host)
                 async let sessions = client.listSessions(for: host, token: token)
+                let fetchedSessions = try await sessions
+                let fetchedHostInfo = try await hostInfo
+
+                if let expectedHostId = host.hostId,
+                   let actualHostId = fetchedHostInfo.hostId,
+                   !expectedHostId.isEmpty,
+                   !actualHostId.isEmpty,
+                   expectedHostId != actualHostId {
+                    throw InventoryStoreError.hostIdentityMismatch(
+                        expected: expectedHostId,
+                        actual: actualHostId
+                    )
+                }
 
                 nextSections.append(
                     InventoryDeviceSection(
                         host: host,
                         token: token,
-                        sessions: sortSessions(try await sessions),
-                        hostInfo: try await hostInfo,
+                        sessions: sortSessions(fetchedSessions),
+                        hostInfo: fetchedHostInfo,
                         errorMessage: nil
                     )
+                )
+                SentritsDebugTrace.log(
+                    "ios.inventory",
+                    "refresh.host",
+                    "\(hostIdentity) sessions=\(fetchedSessions.count) hostInfo=\(fetchedHostInfo.displayName)"
                 )
             } catch {
                 failures.append("\(host.displayLabel): \(error.localizedDescription)")
@@ -130,6 +151,11 @@ final class InventoryStore: ObservableObject {
                         hostInfo: nil,
                         errorMessage: error.localizedDescription
                     )
+                )
+                SentritsDebugTrace.log(
+                    "ios.inventory",
+                    "refresh.host.error",
+                    "\(hostIdentity) error=\(error.localizedDescription)"
                 )
             }
         }
@@ -143,6 +169,11 @@ final class InventoryStore: ObservableObject {
         sections = sortedSections
         lastRefreshAtUnixMs = now
         errorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n")
+        SentritsDebugTrace.log(
+            "ios.inventory",
+            "refresh.end",
+            "sections=\(sections.count) failures=\(failures.count) totalSessions=\(sections.reduce(0) { $0 + $1.sessions.count })"
+        )
         await deliverNotifications(for: transitions)
     }
 
@@ -240,6 +271,7 @@ enum InventoryStoreError: LocalizedError {
     case hostUnavailable
     case missingToken
     case invalidWorkspaceRoot
+    case hostIdentityMismatch(expected: String, actual: String)
 
     var errorDescription: String? {
         switch self {
@@ -249,6 +281,8 @@ enum InventoryStoreError: LocalizedError {
             return "This device is not paired yet."
         case .invalidWorkspaceRoot:
             return "Enter a workspace path before creating a session."
+        case .hostIdentityMismatch:
+            return "This saved device now points to a different Sentrits host. Re-pair or update the host entry."
         }
     }
 }

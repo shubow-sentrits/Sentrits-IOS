@@ -83,6 +83,10 @@ struct InventoryView: View {
 
         return AnyView(
             withSheets
+                .task {
+                    guard autoRefreshOnAppear, store.sections.isEmpty, !store.isRefreshing else { return }
+                    await store.refresh()
+                }
                 .alert("Remove stopped sessions?", isPresented: Binding(
                     get: { clearStoppedHost != nil },
                     set: { isPresented in

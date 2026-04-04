@@ -219,7 +219,11 @@ enum SentritsDebugTrace {
 
     static func shouldTraceHTTP(_ path: String) -> Bool {
 #if DEBUG
-        return path.contains("/snapshot") || path.contains("/controller") || path.contains("/ws/")
+        return path.contains("/snapshot") ||
+            path == "/sessions" ||
+            path == "/host/info" ||
+            path.contains("/controller") ||
+            path.contains("/ws/")
 #else
         _ = path
         return false

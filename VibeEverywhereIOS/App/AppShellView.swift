@@ -225,6 +225,13 @@ struct AppShellView: View {
                     notificationPreferences: notificationPreferences,
                     activityStore: activityStore,
                     onFocusSession: { sessionID, hostID in
+                        if let viewModel = explorerStore.sessionViewModel(sessionID: sessionID, hostID: hostID) {
+                            SentritsDebugTrace.log(
+                                "ios.explorer",
+                                "focus",
+                                "host=\(viewModel.host.displayLabel) id=\(viewModel.host.id.uuidString) endpoint=\(viewModel.host.address):\(viewModel.host.port) session=\(sessionID)"
+                            )
+                        }
                         focusedSessionID = sessionID
                         focusedHostID = hostID
                     }
@@ -363,6 +370,11 @@ final class ExplorerWorkspaceStore: ObservableObject {
     }
 
     func connect(host: SavedHost, session: SessionSummary) {
+        SentritsDebugTrace.log(
+            "ios.explorer",
+            "connect",
+            "host=\(host.displayLabel) id=\(host.id.uuidString) endpoint=\(host.address):\(host.port) session=\(session.sessionId)"
+        )
         guard let token = hostsStore.token(for: host) ?? tokenStore.token(for: host.tokenKey) else {
             errorMessage = "This device is not paired yet."
             return
