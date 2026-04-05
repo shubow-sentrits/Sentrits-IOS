@@ -20,6 +20,7 @@
 		A0000000000000000000000B /* SessionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* SessionsViewModel.swift */; };
 		A0000000000000000000000C /* SessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* SessionViewModel.swift */; };
 		A0000000000000000000000D /* TerminalTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* TerminalTextView.swift */; };
+		A00000000000000000000076 /* SentritsSwiftTermView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000077 /* SentritsSwiftTermView.swift */; };
 		A0000000000000000000000E /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* ConnectView.swift */; };
 		A0000000000000000000000F /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* PairingView.swift */; };
 		A00000000000000000000010 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* SessionsView.swift */; };
@@ -68,6 +69,7 @@
 		A0000000000000000000001B /* SessionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001C /* SessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000001D /* TerminalTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalTextView.swift; sourceTree = "<group>"; };
+		A00000000000000000000077 /* SentritsSwiftTermView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentritsSwiftTermView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		A00000000000000000000020 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
@@ -187,6 +189,7 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000001D /* TerminalTextView.swift */,
+				A00000000000000000000077 /* SentritsSwiftTermView.swift */,
 				A00000000000000000000046 /* InventoryView.swift */,
 				A0000000000000000000001E /* ConnectView.swift */,
 				A00000000000000000000063 /* ExplorerWorkspaceView.swift */,
@@ -346,6 +349,7 @@
 				A0000000000000000000000C /* SessionViewModel.swift in Sources */,
 				A00000000000000000000041 /* InventoryStore.swift in Sources */,
 				A0000000000000000000000D /* TerminalTextView.swift in Sources */,
+				A00000000000000000000076 /* SentritsSwiftTermView.swift in Sources */,
 				A00000000000000000000043 /* AppShellView.swift in Sources */,
 				A0000000000000000000000E /* ConnectView.swift in Sources */,
 				A00000000000000000000062 /* ExplorerWorkspaceView.swift in Sources */,

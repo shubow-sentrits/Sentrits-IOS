@@ -113,7 +113,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> TerminalView {
-        let terminalView = TerminalView(frame: .zero)
+        let terminalView = SentritsSwiftTermView(frame: .zero)
         terminalView.terminalDelegate = context.coordinator
         terminalView.nativeBackgroundColor = .clear
         terminalView.backgroundColor = .clear
@@ -203,6 +203,8 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
 
         @MainActor
         private func applyMode(to terminalView: TerminalView) {
+            let swiftTermView = terminalView as? SentritsSwiftTermView
+            swiftTermView?.preserveViewportAnchor()
             if let resize = parent.model.observerDimensions {
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
@@ -212,27 +214,37 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
                 } else {
                     _ = terminalView.resignFirstResponder()
                 }
+                swiftTermView?.restoreViewportAfterTerminalUpdate()
             }
         }
 
         @MainActor
         private func resetTerminalView(_ terminalView: TerminalView) {
+            let swiftTermView = terminalView as? SentritsSwiftTermView
+            swiftTermView?.preserveViewportAnchor()
             terminalView.getTerminal().resetToInitialState()
             if let resize = parent.model.observerDimensions {
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
             terminalView.setNeedsDisplay()
+            swiftTermView?.restoreViewportAfterTerminalUpdate()
         }
 
         @MainActor
         private func feed(base64Chunk: String, to terminalView: TerminalView) {
             guard let data = Data(base64Encoded: base64Chunk) else { return }
+            let swiftTermView = terminalView as? SentritsSwiftTermView
+            swiftTermView?.preserveViewportAnchor()
             terminalView.feed(byteArray: Array(data)[...])
             terminalView.setNeedsDisplay()
+            swiftTermView?.restoreViewportAfterTerminalUpdate()
         }
 
         func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-            parent.callbacks.onResize(TerminalResize(cols: newCols, rows: newRows))
+            let onResize = parent.callbacks.onResize
+            DispatchQueue.main.async {
+                onResize(TerminalResize(cols: newCols, rows: newRows))
+            }
         }
 
         func setTerminalTitle(source: TerminalView, title: String) {}
@@ -241,7 +253,10 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
 
         func send(source: TerminalView, data: ArraySlice<UInt8>) {
             let payload = String(decoding: Array(data), as: UTF8.self)
-            parent.callbacks.onInput(payload)
+            let onInput = parent.callbacks.onInput
+            DispatchQueue.main.async {
+                onInput(payload)
+            }
         }
 
         func scrolled(source: TerminalView, position: Double) {}
