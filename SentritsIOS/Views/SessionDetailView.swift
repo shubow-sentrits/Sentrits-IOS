@@ -12,6 +12,8 @@ struct SessionDetailView: View {
     @State private var keyPageIndex = 0
     @State private var promptEditorDragOffset: CGFloat = 0
     @State private var isKeyboardVisible = false
+    @State private var isKeyboardInputBarHidden = false
+    @State private var isKeyboardInputBarPinnedTop = false
     @State private var baselineAvailableHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
 
@@ -39,22 +41,6 @@ struct SessionDetailView: View {
                 focusedBackground
                     .ignoresSafeArea()
                 
-                if isKeyboardVisible {
-//                    VStack{
-//                        modeBar
-//                            .frame(height: layout.modeBarHeight)
-//                            .padding(.horizontal, layout.outerPadding)
-//                            .zIndex(1)
-//                            .padding(.vertical, -10)
-                        inputBar
-                            .frame(height: layout.inputBarHeight)
-                            .padding(.horizontal, layout.outerPadding)
-                            .padding(.bottom, layout.bottomPadding)
-                            .zIndex(1)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-//                    }
-                }
-
                 VStack(spacing: layout.verticalSpacing) {
                     
                     if !isKeyboardVisible {
@@ -182,6 +168,21 @@ struct SessionDetailView: View {
                 isKeyboardVisible = false
             }
         }
+        .overlay {
+            if isKeyboardVisible {
+                keyboardOverlayBar
+                    .padding(.horizontal, layout.outerPadding)
+                    .padding(.top, isKeyboardInputBarPinnedTop ? layout.topPadding : 0)
+                    .padding(.bottom, isKeyboardInputBarPinnedTop ? 0 : layout.bottomPadding)
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: isKeyboardInputBarPinnedTop ? .topTrailing : .bottomTrailing
+                    )
+                    .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isKeyboardInputBarPinnedTop)
+                    .transition(.move(edge: isKeyboardInputBarPinnedTop ? .top : .bottom).combined(with: .opacity))
+            }
+        }
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: isContextPanelPresented)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -210,6 +211,10 @@ struct SessionDetailView: View {
         let overlap = max(0, screenHeight - frameValue.minY)
         withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
             isKeyboardVisible = overlap > 0
+            if !isKeyboardVisible {
+                isKeyboardInputBarHidden = false
+                isKeyboardInputBarPinnedTop = false
+            }
         }
     }
 
@@ -433,6 +438,56 @@ struct SessionDetailView: View {
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var keyboardOverlayBar: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            
+            if !isKeyboardInputBarHidden {
+                if isKeyboardInputBarPinnedTop{
+                    inputBar
+                        .frame(height: layout.inputBarHeight)
+                }
+            }
+            
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                        isKeyboardInputBarPinnedTop.toggle()
+                    }
+                } label: {
+                    Image(systemName: isKeyboardInputBarPinnedTop ? "arrow.down.to.line.compact" : "arrow.up.to.line.compact")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color("FocusedText"))
+                        .frame(width: 32, height: 32)
+                        .background(Color("FocusedPanelSoft").opacity(0.92))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                        isKeyboardInputBarHidden.toggle()
+                    }
+                } label: {
+                    Image(systemName: isKeyboardInputBarHidden ? "chevron.compact.up" : "keyboard.chevron.compact.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color("FocusedText"))
+                        .frame(width: 32, height: 32)
+                        .background(Color("FocusedPanelSoft").opacity(0.92))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !isKeyboardInputBarHidden {
+                if !isKeyboardInputBarPinnedTop{
+                    inputBar
+                        .frame(height: layout.inputBarHeight)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private var pageIndicator: some View {
