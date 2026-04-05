@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-struct TerminalTextView: UIViewRepresentable {
+struct TerminalTextView: View {
     enum Mode {
         case preview
         case focused
@@ -16,6 +16,68 @@ struct TerminalTextView: UIViewRepresentable {
     let observerDimensions: TerminalResize?
     let onInput: (String) -> Void
     let onResize: (TerminalResize) -> Void
+
+    var body: some View {
+        TerminalSurface(
+            rendererKind: .xterm,
+            model: surfaceModel,
+            callbacks: .init(
+                onInput: onInput,
+                onResize: onResize
+            )
+        )
+    }
+
+    private var surfaceModel: TerminalSurfaceModel {
+        TerminalSurfaceModel(
+            mode: mode,
+            isInputEnabled: isInputEnabled,
+            useCanonicalDisplay: useCanonicalDisplay,
+            bootstrapChunksBase64: bootstrapChunksBase64,
+            bootstrapToken: bootstrapToken,
+            observerDimensions: observerDimensions,
+            resetVersion: terminal.resetVersion,
+            outputChunksBase64: terminal.outputChunksBase64
+        )
+    }
+}
+
+private struct TerminalSurface: View {
+    let rendererKind: TerminalRendererKind
+    let model: TerminalSurfaceModel
+    let callbacks: TerminalSurfaceCallbacks
+
+    var body: some View {
+        switch rendererKind {
+        case .xterm:
+            XtermTerminalRendererView(model: model, callbacks: callbacks)
+        }
+    }
+}
+
+private enum TerminalRendererKind {
+    case xterm
+}
+
+private struct TerminalSurfaceModel: Equatable {
+    let mode: TerminalTextView.Mode
+    let isInputEnabled: Bool
+    let useCanonicalDisplay: Bool
+    let bootstrapChunksBase64: [String]
+    let bootstrapToken: Int
+    let observerDimensions: TerminalResize?
+    let resetVersion: Int
+    let outputChunksBase64: [String]
+}
+
+private struct TerminalSurfaceCallbacks {
+    let onInput: (String) -> Void
+    let onResize: (TerminalResize) -> Void
+}
+
+private struct XtermTerminalRendererView: UIViewRepresentable {
+    let model: TerminalSurfaceModel
+    let callbacks: TerminalSurfaceCallbacks
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -56,19 +118,19 @@ struct TerminalTextView: UIViewRepresentable {
         static let resizeHandlerName = "terminalResize"
         static let readyHandlerName = "terminalReady"
 
-        var parent: TerminalTextView
+        var parent: XtermTerminalRendererView
         weak var webView: WKWebView?
 
         private var isRendererReady = false
         private var lastResetVersion = -1
         private var lastRenderedChunkCount = 0
         private var lastInputEnabled: Bool?
-        private var lastMode: Mode?
+        private var lastMode: TerminalTextView.Mode?
         private var lastUseCanonicalDisplay: Bool?
         private var lastObserverDimensions: TerminalResize?
         private var lastBootstrapToken = -1
 
-        init(parent: TerminalTextView) {
+        init(parent: XtermTerminalRendererView) {
             self.parent = parent
         }
 
@@ -84,7 +146,7 @@ struct TerminalTextView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            SentritsDebugTrace.log("ios.focus", "renderer.didFinish", "mode=\(parent.mode == .focused ? "focused" : "preview") canonical=\(parent.useCanonicalDisplay)")
+            SentritsDebugTrace.log("ios.focus", "renderer.didFinish", "mode=\(parent.model.mode == .focused ? "focused" : "preview") canonical=\(parent.model.useCanonicalDisplay)")
             synchronizeRendererIfNeeded()
         }
 
@@ -92,17 +154,17 @@ struct TerminalTextView: UIViewRepresentable {
             switch message.name {
             case Self.inputHandlerName:
                 guard let data = message.body as? String else { return }
-                parent.onInput(data)
+                parent.callbacks.onInput(data)
             case Self.resizeHandlerName:
                 guard let body = message.body as? [String: Any],
                       let cols = body["cols"] as? Int,
                       let rows = body["rows"] as? Int else {
                     return
                 }
-                parent.onResize(TerminalResize(cols: cols, rows: rows))
+                parent.callbacks.onResize(TerminalResize(cols: cols, rows: rows))
             case Self.readyHandlerName:
                 isRendererReady = true
-                SentritsDebugTrace.log("ios.focus", "renderer.ready", "mode=\(parent.mode == .focused ? "focused" : "preview") canonical=\(parent.useCanonicalDisplay)")
+                SentritsDebugTrace.log("ios.focus", "renderer.ready", "mode=\(parent.model.mode == .focused ? "focused" : "preview") canonical=\(parent.model.useCanonicalDisplay)")
                 synchronizeRendererIfNeeded(forceFullReload: true)
             default:
                 break
@@ -112,58 +174,62 @@ struct TerminalTextView: UIViewRepresentable {
         func synchronizeRendererIfNeeded(forceFullReload: Bool = false) {
             guard isRendererReady, let webView else { return }
 
-            if forceFullReload || lastMode != parent.mode || lastInputEnabled != parent.isInputEnabled || lastUseCanonicalDisplay != parent.useCanonicalDisplay || lastObserverDimensions != parent.observerDimensions {
+            if forceFullReload
+                || lastMode != parent.model.mode
+                || lastInputEnabled != parent.model.isInputEnabled
+                || lastUseCanonicalDisplay != parent.model.useCanonicalDisplay
+                || lastObserverDimensions != parent.model.observerDimensions {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "renderer.mode",
-                    "focused=\(parent.mode == .focused) input=\(parent.isInputEnabled) canonical=\(parent.useCanonicalDisplay)"
+                    "focused=\(parent.model.mode == .focused) input=\(parent.model.isInputEnabled) canonical=\(parent.model.useCanonicalDisplay)"
                 )
                 evaluate("window.vibeTerminal.setMode(\(jsonString(from: modePayload())))", in: webView)
-                lastMode = parent.mode
-                lastInputEnabled = parent.isInputEnabled
-                lastUseCanonicalDisplay = parent.useCanonicalDisplay
-                lastObserverDimensions = parent.observerDimensions
+                lastMode = parent.model.mode
+                lastInputEnabled = parent.model.isInputEnabled
+                lastUseCanonicalDisplay = parent.model.useCanonicalDisplay
+                lastObserverDimensions = parent.model.observerDimensions
             }
 
-            if forceFullReload || lastResetVersion != parent.terminal.resetVersion {
-                SentritsDebugTrace.log("ios.focus", "renderer.reset", "resetVersion=\(parent.terminal.resetVersion)")
+            if forceFullReload || lastResetVersion != parent.model.resetVersion {
+                SentritsDebugTrace.log("ios.focus", "renderer.reset", "resetVersion=\(parent.model.resetVersion)")
                 evaluate("window.vibeTerminal.reset()", in: webView)
-                lastResetVersion = parent.terminal.resetVersion
+                lastResetVersion = parent.model.resetVersion
                 lastRenderedChunkCount = 0
             }
 
-            if parent.useCanonicalDisplay,
-               forceFullReload || lastBootstrapToken != parent.bootstrapToken {
+            if parent.model.useCanonicalDisplay,
+               forceFullReload || lastBootstrapToken != parent.model.bootstrapToken {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "renderer.bootstrap",
-                    "token=\(parent.bootstrapToken) chunks=\(parent.bootstrapChunksBase64.count)"
+                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count)"
                 )
                 lastRenderedChunkCount = 0
                 evaluate(
-                    "window.vibeTerminal.replaceBase64Chunks(\(parent.bootstrapToken), \(jsonString(from: parent.bootstrapChunksBase64)))",
+                    "window.vibeTerminal.replaceBase64Chunks(\(parent.model.bootstrapToken), \(jsonString(from: parent.model.bootstrapChunksBase64)))",
                     in: webView
                 )
-                lastBootstrapToken = parent.bootstrapToken
+                lastBootstrapToken = parent.model.bootstrapToken
             }
 
-            if parent.useCanonicalDisplay {
+            if parent.model.useCanonicalDisplay {
                 return
             }
 
-            guard parent.terminal.outputChunksBase64.count > lastRenderedChunkCount else { return }
-            let newChunks = Array(parent.terminal.outputChunksBase64[lastRenderedChunkCount...])
+            guard parent.model.outputChunksBase64.count > lastRenderedChunkCount else { return }
+            let newChunks = Array(parent.model.outputChunksBase64[lastRenderedChunkCount...])
             evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: newChunks)))", in: webView)
-            lastRenderedChunkCount = parent.terminal.outputChunksBase64.count
+            lastRenderedChunkCount = parent.model.outputChunksBase64.count
         }
 
         private func modePayload() -> TerminalModePayload {
             TerminalModePayload(
-                mode: parent.mode == .focused ? "focused" : "preview",
-                inputEnabled: parent.isInputEnabled,
-                reportResize: parent.mode == .focused || parent.isInputEnabled,
-                fixedCols: parent.mode == .preview && !parent.isInputEnabled ? parent.observerDimensions?.cols : nil,
-                fixedRows: parent.mode == .preview && !parent.isInputEnabled ? parent.observerDimensions?.rows : nil
+                mode: parent.model.mode == .focused ? "focused" : "preview",
+                inputEnabled: parent.model.isInputEnabled,
+                reportResize: parent.model.mode == .focused || parent.model.isInputEnabled,
+                fixedCols: parent.model.mode == .preview && !parent.model.isInputEnabled ? parent.model.observerDimensions?.cols : nil,
+                fixedRows: parent.model.mode == .preview && !parent.model.isInputEnabled ? parent.model.observerDimensions?.rows : nil
             )
         }
 
@@ -179,21 +245,6 @@ struct TerminalTextView: UIViewRepresentable {
             }
             return string
         }
-    }
-}
-
-private extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        guard size > 0, !isEmpty else { return isEmpty ? [] : [self] }
-        var result: [[Element]] = []
-        result.reserveCapacity((count / size) + 1)
-        var index = startIndex
-        while index < endIndex {
-            let end = self.index(index, offsetBy: size, limitedBy: endIndex) ?? endIndex
-            result.append(Array(self[index..<end]))
-            index = end
-        }
-        return result
     }
 }
 
