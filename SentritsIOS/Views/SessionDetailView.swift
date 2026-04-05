@@ -41,6 +41,11 @@ struct SessionDetailView: View {
             ZStack(alignment: .top) {
                 focusedBackground
                     .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard isKeyboardVisible else { return }
+                        dismissKeyboard()
+                    }
                 
                 VStack(spacing: layout.verticalSpacing) {
                     
@@ -218,6 +223,17 @@ struct SessionDetailView: View {
             if !isKeyboardVisible {
                 isKeyboardInputBarHidden = false
                 isKeyboardInputBarPinnedTop = false
+            }
+        }
+    }
+
+    private func dismissKeyboard() {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                if window.endEditing(true) {
+                    return
+                }
             }
         }
     }
