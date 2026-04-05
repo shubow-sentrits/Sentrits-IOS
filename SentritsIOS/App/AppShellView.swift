@@ -611,6 +611,7 @@ extension ExplorerWorkspaceStore {
 
 private struct NotificationConfigView: View {
     @ObservedObject var notificationPreferences: NotificationPreferencesStore
+    @AppStorage("terminal.renderer.kind") private var terminalRendererRawValue = TerminalRendererKind.swiftTerm.rawValue
 
     var body: some View {
         ZStack {
@@ -697,6 +698,29 @@ private struct NotificationConfigView: View {
                             }
                         }
                         .tint(Color("AppTint"))
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Terminal renderer")
+                                .font(.headline)
+                                .foregroundStyle(Color.white.opacity(0.9))
+                            Text("SwiftTerm is the default native renderer. Switch back to xterm.js if you need the old fallback.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.white.opacity(0.6))
+
+                            Picker("Terminal renderer", selection: Binding(
+                                get: { terminalRenderer },
+                                set: { terminalRendererRawValue = $0.rawValue }
+                            )) {
+                                ForEach(TerminalRendererKind.allCases) { renderer in
+                                    Text(renderer.label).tag(renderer)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            Text(terminalRenderer.detail)
+                                .font(.caption)
+                                .foregroundStyle(Color.white.opacity(0.52))
+                        }
                     }
                     .padding(18)
                     .background(Color.white.opacity(0.06))
@@ -728,5 +752,9 @@ private struct NotificationConfigView: View {
         case .denied: return "Notifications are denied in system settings."
         default: return "Allow notifications to receive quiet and stopped session alerts."
         }
+    }
+
+    private var terminalRenderer: TerminalRendererKind {
+        TerminalRendererKind(rawValue: terminalRendererRawValue) ?? .swiftTerm
     }
 }

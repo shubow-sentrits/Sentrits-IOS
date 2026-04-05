@@ -41,6 +41,7 @@
 		A00000000000000000000064 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000065 /* Assets.xcassets */; };
 		A00000000000000000000066 /* SessionBadgeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000067 /* SessionBadgeSupport.swift */; };
 		A00000000000000000000068 /* ActivityLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000069 /* ActivityLogTests.swift */; };
+		A00000000000000000000073 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000075 /* SwiftTerm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -98,6 +99,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000073 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +244,9 @@
 			dependencies = (
 			);
 			name = SentritsIOS;
+			packageProductDependencies = (
+				A00000000000000000000075 /* SwiftTerm */,
+			);
 			productName = SentritsIOS;
 			productReference = A00000000000000000000023 /* SentritsIOS.app */;
 			productType = "com.apple.product-type.application";
@@ -291,6 +296,9 @@
 			);
 			mainGroup = A00000000000000000000026;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A00000000000000000000074 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A00000000000000000000026;
 			projectDirPath = "";
@@ -370,6 +378,25 @@
 			targetProxy = A0000000000000000000006F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A00000000000000000000074 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.11.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000075 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000074 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A00000000000000000000034 /* Debug */ = {

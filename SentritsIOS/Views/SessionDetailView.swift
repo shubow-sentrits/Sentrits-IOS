@@ -15,6 +15,7 @@ struct SessionDetailView: View {
     @State private var isKeyboardInputBarHidden = false
     @State private var isKeyboardInputBarPinnedTop = false
     @State private var baselineAvailableHeight: CGFloat = 0
+    @AppStorage("terminal.renderer.kind") private var terminalRendererRawValue = TerminalRendererKind.swiftTerm.rawValue
     @Environment(\.dismiss) private var dismiss
 
     init(
@@ -211,6 +212,9 @@ struct SessionDetailView: View {
         let overlap = max(0, screenHeight - frameValue.minY)
         withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
             isKeyboardVisible = overlap > 0
+            if isKeyboardVisible {
+                isKeyboardInputBarHidden = isSwiftTermRenderer
+            }
             if !isKeyboardVisible {
                 isKeyboardInputBarHidden = false
                 isKeyboardInputBarPinnedTop = false
@@ -232,6 +236,10 @@ struct SessionDetailView: View {
                 endRadius: 360
             )
         )
+    }
+
+    private var isSwiftTermRenderer: Bool {
+        (TerminalRendererKind(rawValue: terminalRendererRawValue) ?? .swiftTerm) == .swiftTerm
     }
 
     private var headerBar: some View {

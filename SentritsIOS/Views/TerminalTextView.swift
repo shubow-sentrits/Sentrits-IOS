@@ -1,5 +1,31 @@
 import SwiftUI
 import WebKit
+import SwiftTerm
+
+enum TerminalRendererKind: String, CaseIterable, Identifiable {
+    case swiftTerm = "swiftterm"
+    case xterm = "xterm"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .swiftTerm:
+            return "SwiftTerm"
+        case .xterm:
+            return "xterm.js"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .swiftTerm:
+            return "Native iOS terminal renderer"
+        case .xterm:
+            return "Web fallback renderer"
+        }
+    }
+}
 
 struct TerminalTextView: View {
     enum Mode {
@@ -16,10 +42,11 @@ struct TerminalTextView: View {
     let observerDimensions: TerminalResize?
     let onInput: (String) -> Void
     let onResize: (TerminalResize) -> Void
+    @AppStorage("terminal.renderer.kind") private var rendererKindRawValue = TerminalRendererKind.swiftTerm.rawValue
 
     var body: some View {
         TerminalSurface(
-            rendererKind: .xterm,
+            rendererKind: rendererKind,
             model: surfaceModel,
             callbacks: .init(
                 onInput: onInput,
@@ -40,6 +67,10 @@ struct TerminalTextView: View {
             outputChunksBase64: terminal.outputChunksBase64
         )
     }
+
+    private var rendererKind: TerminalRendererKind {
+        TerminalRendererKind(rawValue: rendererKindRawValue) ?? .swiftTerm
+    }
 }
 
 private struct TerminalSurface: View {
@@ -49,14 +80,12 @@ private struct TerminalSurface: View {
 
     var body: some View {
         switch rendererKind {
+        case .swiftTerm:
+            SwiftTermTerminalRendererView(model: model, callbacks: callbacks)
         case .xterm:
             XtermTerminalRendererView(model: model, callbacks: callbacks)
         }
     }
-}
-
-private enum TerminalRendererKind {
-    case xterm
 }
 
 private struct TerminalSurfaceModel: Equatable {
@@ -73,6 +102,156 @@ private struct TerminalSurfaceModel: Equatable {
 private struct TerminalSurfaceCallbacks {
     let onInput: (String) -> Void
     let onResize: (TerminalResize) -> Void
+}
+
+private struct SwiftTermTerminalRendererView: UIViewRepresentable {
+    let model: TerminalSurfaceModel
+    let callbacks: TerminalSurfaceCallbacks
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> TerminalView {
+        let terminalView = TerminalView(frame: .zero)
+        terminalView.terminalDelegate = context.coordinator
+        terminalView.nativeBackgroundColor = .clear
+        terminalView.backgroundColor = .clear
+        terminalView.caretColor = UIColor(named: "FocusedText") ?? .white
+        terminalView.selectedTextBackgroundColor = UIColor(named: "FocusedPanelSoft")?.withAlphaComponent(0.4) ?? UIColor.white.withAlphaComponent(0.2)
+        context.coordinator.terminalView = terminalView
+        context.coordinator.synchronizeRendererIfNeeded(forceFullReload: true)
+        return terminalView
+    }
+
+    func updateUIView(_ uiView: TerminalView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.synchronizeRendererIfNeeded()
+    }
+
+    final class Coordinator: NSObject, TerminalViewDelegate {
+        var parent: SwiftTermTerminalRendererView
+        weak var terminalView: TerminalView?
+
+        private var lastResetVersion = -1
+        private var lastRenderedChunkCount = 0
+        private var lastBootstrapToken = -1
+        private var lastInputEnabled: Bool?
+        private var lastMode: TerminalTextView.Mode?
+        private var lastUseCanonicalDisplay: Bool?
+        private var lastObserverDimensions: TerminalResize?
+
+        init(parent: SwiftTermTerminalRendererView) {
+            self.parent = parent
+        }
+
+        @MainActor
+        func synchronizeRendererIfNeeded(forceFullReload: Bool = false) {
+            guard let terminalView else { return }
+
+            if forceFullReload
+                || lastMode != parent.model.mode
+                || lastInputEnabled != parent.model.isInputEnabled
+                || lastUseCanonicalDisplay != parent.model.useCanonicalDisplay
+                || lastObserverDimensions != parent.model.observerDimensions {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "swiftterm.mode",
+                    "focused=\(parent.model.mode == .focused) input=\(parent.model.isInputEnabled) canonical=\(parent.model.useCanonicalDisplay)"
+                )
+                applyMode(to: terminalView)
+                lastMode = parent.model.mode
+                lastInputEnabled = parent.model.isInputEnabled
+                lastUseCanonicalDisplay = parent.model.useCanonicalDisplay
+                lastObserverDimensions = parent.model.observerDimensions
+            }
+
+            if forceFullReload || lastResetVersion != parent.model.resetVersion {
+                resetTerminalView(terminalView)
+                lastResetVersion = parent.model.resetVersion
+                lastRenderedChunkCount = 0
+                lastBootstrapToken = -1
+            }
+
+            if parent.model.useCanonicalDisplay,
+               forceFullReload || lastBootstrapToken != parent.model.bootstrapToken {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "swiftterm.bootstrap",
+                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count)"
+                )
+                resetTerminalView(terminalView)
+                for chunk in parent.model.bootstrapChunksBase64 {
+                    feed(base64Chunk: chunk, to: terminalView)
+                }
+                lastBootstrapToken = parent.model.bootstrapToken
+                lastRenderedChunkCount = 0
+                return
+            }
+
+            if parent.model.useCanonicalDisplay {
+                return
+            }
+
+            guard parent.model.outputChunksBase64.count > lastRenderedChunkCount else { return }
+            let newChunks = Array(parent.model.outputChunksBase64[lastRenderedChunkCount...])
+            for chunk in newChunks {
+                feed(base64Chunk: chunk, to: terminalView)
+            }
+            lastRenderedChunkCount = parent.model.outputChunksBase64.count
+        }
+
+        @MainActor
+        private func applyMode(to terminalView: TerminalView) {
+            if let resize = parent.model.observerDimensions {
+                terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
+            }
+            DispatchQueue.main.async {
+                if self.parent.model.isInputEnabled {
+                    _ = terminalView.becomeFirstResponder()
+                } else {
+                    _ = terminalView.resignFirstResponder()
+                }
+            }
+        }
+
+        @MainActor
+        private func resetTerminalView(_ terminalView: TerminalView) {
+            terminalView.getTerminal().resetToInitialState()
+            if let resize = parent.model.observerDimensions {
+                terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
+            }
+            terminalView.setNeedsDisplay()
+        }
+
+        @MainActor
+        private func feed(base64Chunk: String, to terminalView: TerminalView) {
+            guard let data = Data(base64Encoded: base64Chunk) else { return }
+            terminalView.feed(byteArray: Array(data)[...])
+            terminalView.setNeedsDisplay()
+        }
+
+        func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
+            parent.callbacks.onResize(TerminalResize(cols: newCols, rows: newRows))
+        }
+
+        func setTerminalTitle(source: TerminalView, title: String) {}
+
+        func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
+
+        func send(source: TerminalView, data: ArraySlice<UInt8>) {
+            let payload = String(decoding: Array(data), as: UTF8.self)
+            parent.callbacks.onInput(payload)
+        }
+
+        func scrolled(source: TerminalView, position: Double) {}
+
+        func requestOpenLink(source: TerminalView, link: String, params: [String : String]) {}
+
+        func clipboardCopy(source: TerminalView, content: Data) {}
+
+        func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
+    }
 }
 
 private struct XtermTerminalRendererView: UIViewRepresentable {
