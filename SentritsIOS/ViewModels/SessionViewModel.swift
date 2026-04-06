@@ -31,6 +31,7 @@ final class SessionViewModel: ObservableObject {
     private var pendingSnapshotRefreshDelayNanoseconds: UInt64 = 0
     private var lastSnapshotRefreshStartedAt: ContinuousClock.Instant?
     private let refreshClock = ContinuousClock()
+    private var controllerOutputTraceBudget = 0
 
     init(host: SavedHost, token: String, session: SessionSummary, activityStore: ActivityLogStore) {
         self.host = host
@@ -495,10 +496,14 @@ final class SessionViewModel: ObservableObject {
         switch controllerEvent {
         case let .ready(payload):
             activeControllerClientId = payload.controllerClientId
+            let rawChunksBeforeClear = terminal.outputChunksBase64.count
+            let bootstrapSummary = SentritsDebugTrace.summarizeBase64Chunks(terminalBootstrapChunksBase64)
+            terminal.clearBufferedOutput()
+            controllerOutputTraceBudget = 8
             SentritsDebugTrace.log(
                 "ios.focus",
                 "control.ready",
-                "session=\(session.sessionId) controllerClientId=\(payload.controllerClientId ?? "nil") resize=\(terminalResize.cols)x\(terminalResize.rows)"
+                "session=\(session.sessionId) controllerClientId=\(payload.controllerClientId ?? "nil") resize=\(terminalResize.cols)x\(terminalResize.rows) bootstrapToken=\(terminalBootstrapToken) bootstrapChunks=\(terminalBootstrapChunksBase64.count) bootstrapSummary=\(bootstrapSummary) rawChunksBeforeClear=\(rawChunksBeforeClear) rawChunksAfterClear=\(terminal.outputChunksBase64.count)"
             )
             activityStore.record(
                 category: .control,
@@ -511,9 +516,17 @@ final class SessionViewModel: ObservableObject {
                 await controllerSocket.sendResize(terminalResize)
             }
         case let .terminalOutput(data):
-            SentritsDebugTrace.log("ios.focus", "controller.output.raw", "session=\(session.sessionId) bytes=\(data.count)")
+            if controllerOutputTraceBudget > 0 {
+                controllerOutputTraceBudget -= 1
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "controller.output.raw",
+                    "session=\(session.sessionId) bytes=\(data.count) summary=\(SentritsDebugTrace.summarizeData(data)) rawChunksBefore=\(terminal.outputChunksBase64.count)"
+                )
+            }
             terminal.appendBase64Raw(data.base64EncodedString())
         case .released:
+            controllerOutputTraceBudget = 0
             activityStore.record(
                 category: .control,
                 title: "Control released",
@@ -523,6 +536,7 @@ final class SessionViewModel: ObservableObject {
             )
             scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
         case let .rejected(payload):
+            controllerOutputTraceBudget = 0
             lastError = "\(payload.code): \(payload.message)"
             activityStore.record(
                 severity: .warning,
@@ -533,9 +547,11 @@ final class SessionViewModel: ObservableObject {
                 sessionID: payload.sessionId ?? session.sessionId
             )
         case let .sessionExited(payload):
+            controllerOutputTraceBudget = 0
             controllerSocket.disconnect(reason: "Session exited.")
             apply(event: .sessionExited(payload))
         case let .error(payload):
+            controllerOutputTraceBudget = 0
             lastError = "\(payload.code): \(payload.message)"
             activityStore.record(
                 severity: .error,

@@ -54,6 +54,12 @@ final class TerminalEngine: ObservableObject {
         outputChunksBase64.append(dataBase64)
     }
 
+    func clearBufferedOutput() {
+        outputChunksBase64 = []
+        nextExpectedSequence = 0
+        pendingChunks.removeAll()
+    }
+
     func resetSequenceTracking() {
         nextExpectedSequence = 0
         pendingChunks.removeAll()
