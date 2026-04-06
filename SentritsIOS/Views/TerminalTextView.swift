@@ -128,7 +128,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
         let terminalView = SentritsSwiftTermView(frame: .zero)
         terminalView.terminalDelegate = context.coordinator
         terminalView.nativeBackgroundColor = .clear
-        terminalView.backgroundColor = .clear
+        terminalView.backgroundColor = .explorerPanel
         terminalView.caretColor = UIColor(named: "FocusedText") ?? .white
         terminalView.selectedTextBackgroundColor = UIColor(named: "FocusedPanelSoft")?.withAlphaComponent(0.4) ?? UIColor.white.withAlphaComponent(0.2)
         context.coordinator.terminalView = terminalView
