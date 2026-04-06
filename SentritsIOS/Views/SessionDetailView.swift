@@ -107,6 +107,7 @@ struct SessionDetailView: View {
                         .padding(.trailing, 10)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                         .zIndex(2)
+                        .offset(x:40)
                 }
 
                 if isPromptEditorPresented {
