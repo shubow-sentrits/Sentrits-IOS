@@ -1,105 +1,71 @@
 # Sentrits iOS
 
-This repository is the maintained native iOS client for `vibe-hostd`.
+Native iOS client for Sentrits hosts.
 
-## Product Direction
+The app is session-centric. It discovers and pairs with hosts, lists sessions by device, keeps a connected Explorer workspace, opens a focused terminal control surface, records local activity, and manages local notification preferences.
 
-The app is a session-centric remote companion with these top-level surfaces:
+## Current Product Shape
+
+Top-level tabs:
 
 - Pairing
 - Inventory
 - Explorer
 - Activity
 - Config
-- Focused session view
 
-## Current Setup
+Focused session control is presented as a full-screen cover from Explorer.
 
-The current app supports:
+## Current Renderer State
 
-- true UDP discovery on iOS
-- pairing and trusted host management
-- session inventory grouped by device
-- connected-session Explorer grouped by tags
-- focused remote session control through the dedicated controller socket
-- lightweight activity/log visibility
-- local client-side session notifications for subscribed quiet and stopped events
+Focused and preview terminals now use SwiftTerm by default.
 
-## Current MVP Behavior
+- default renderer: SwiftTerm
+- fallback renderer: xterm.js in `WKWebView`
+- renderer selection lives in Config
 
-Current product behavior:
+The focused terminal is the only interactive control surface. Explorer mini terminals remain preview-oriented.
 
-- Inventory is the place to create, stop, clear, connect, and subscribe sessions
-- Explorer is a connected-session workspace with preview-only terminal tiles
-- the focused session view is the only interactive control surface
-- focused control uses the dedicated remote controller WebSocket
-- observer-only views keep following the normal session observer socket
-- notification subscriptions are per session and per device
-- notification delivery is local-only for now, not APNs-backed
+## Runtime Alignment
 
-## Runtime Assumptions
+The client assumes the current host/runtime model:
 
-The current runtime already supports:
+- UDP discovery plus `GET /discovery/info`
+- host verification through `GET /host/info`
+- pairing request and claim
+- authenticated session listing and creation
+- observer and controller WebSockets
+- focused session snapshots
+- session group tags
+- session supervision and controller state
 
-- discovery broadcast + `GET /discovery/info`
-- pairing request + claim
-- session list/create/stop
-- group tag mutation
-- overview/session websockets
-- dedicated remote controller websocket
-- snapshot/file/tail read APIs
-- supervision state and controller identity in session summaries/events
+The corresponding runtime lives in [Sentrits-Core](https://github.com/shubow-sentrits/Sentrits-Core).
 
-## Terminal Rendering
+## Key Repo Areas
 
-The iOS client currently uses a bundled `xterm.js` renderer inside `WKWebView` for session terminals.
+- [SentritsIOS/App](SentritsIOS/App)
+- [SentritsIOS/Services](SentritsIOS/Services)
+- [SentritsIOS/ViewModels](SentritsIOS/ViewModels)
+- [SentritsIOS/Views](SentritsIOS/Views)
+- [SentritsIOS/Resources](SentritsIOS/Resources)
+- [SentritsIOSTests](SentritsIOSTests)
+- [Sources/ExplorerLogic](Sources/ExplorerLogic)
 
-This is the current practical choice:
+## Docs
 
-- PTY output depends on real escape-sequence handling
-- focused control works through Swift-owned socket, resize, and state plumbing
-- compact Explorer previews can stay lower-fidelity than the focused terminal
-
-The assets are vendored under [VibeEverywhereIOS/Resources/Terminal](/Users/shubow/dev/VibeEverywhereIOS/VibeEverywhereIOS/Resources/Terminal).
-
-## Current Repo Reality
-
-The maintained code here includes:
-
-- REST networking
-- session websocket handling
-- controller websocket handling
-- token persistence
-- saved hosts
-- notification preferences and local notification delivery
-- the current tabbed product shell and focused terminal flow
-
-There are still stale or transitional files in the repo, but the shipping app shape is no longer the old MVP described in earlier notes.
-
-## Design Source
-
-See:
-
-- `UI_design/vibeops_atmospheric/DESIGN.md`
-- `UI_design/pairing`
-- `UI_design/inventory`
-- `UI_design/explorer`
-- `UI_design/interactive_terminal_view`
-- `UI_design/activity_log`
-
-## Additional Reference
-
-For discovery and pairing behavior only:
-
-- `/Users/shubow/dev/moonlight-ios`
-
-Do not copy Moonlight’s product model directly. Use it only as a technical reference for native discovery/pairing patterns.
+- [MVP_NOTES.md](MVP_NOTES.md)
+- [IOS_CLIENT_ARCHITECTURE.md](docs/IOS_CLIENT_ARCHITECTURE.md)
+- [IOS_FEATURES.md](docs/IOS_FEATURES.md)
+- [IOS_DEBUGGING_AND_TRACING.md](docs/IOS_DEBUGGING_AND_TRACING.md)
 
 ## Current Limits
 
-Current known limits:
+- focused terminal handoff and rendering are much better than before, but terminal behavior is still being polished
+- SwiftTerm scroll and cursor-follow behavior still need tuning
+- xterm.js remains in the app as a manual fallback
+- notifications are local device notifications, not APNs push
+- Explorer terminals are previews, not full control surfaces
 
-- first-frame rendering after attach/control can still be imperfect until the remote program repaints
-- notifications are local only and do not work like APNs push for a fully closed app
-- Explorer mini terminals are intentionally preview-oriented, not full control surfaces
-- `xterm.js` in `WKWebView` is still the renderer baseline while native alternatives remain future work
+## Source Of Truth
+
+Use the code as truth over any stale branch-era note. The app entry point is [SentritsIOSApp.swift](SentritsIOS/App/SentritsIOSApp.swift), and the current shell is [AppShellView.swift](SentritsIOS/App/AppShellView.swift).

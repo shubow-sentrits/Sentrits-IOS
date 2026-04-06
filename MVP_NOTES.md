@@ -1,98 +1,65 @@
-# Sentrits iOS MVP Notes
+# Sentrits iOS MVP Alignment
 
-## Current Status
+This file tracks the current shipped MVP shape, not the old rebuild plan.
 
-The iOS client is now a working first-class remote client for `vibe-hostd`.
+## In Scope
 
-Current top-level app surfaces:
+- native host discovery on iOS
+- manual host verification
+- pairing and token persistence
+- saved host management
+- device-grouped inventory
+- connected-session Explorer
+- focused terminal control
+- local activity log
+- local notification preferences and delivery
+- renderer selection between SwiftTerm and xterm.js
 
-- Pairing
-- Inventory
-- Explorer
-- Activity
-- Config
-- focused session view
+## Current MVP Checklist
 
-## Current MVP Scope
+- done: UDP discovery and discovered host inspection
+- done: manual add and host verification
+- done: pairing request, claim polling, approval, rejection, and expiry handling
+- done: keychain-backed token storage
+- done: saved host persistence and dedupe by host identity
+- done: inventory grouped by host
+- done: create session
+- done: stop session
+- done: clear inactive sessions
+- done: connect session into Explorer
+- done: Explorer group tabs and group creation
+- done: add and remove session group tags
+- done: focused session route from Explorer
+- done: request and release control in focused view
+- done: focused terminal input and resize
+- done: focused prompt editor and terminal control keys
+- done: session-level notification subscription toggles
+- done: group-level bulk notification toggles from Explorer
+- done: Config toggles for quiet and stopped notifications
+- done: quiet notification threshold selection
+- done: local activity log and clear action
+- done: SwiftTerm as default renderer
+- done: xterm.js fallback renderer switch
 
-The current iOS MVP supports:
+## Still Rough
 
-- native UDP discovery on iOS
-- pairing and saved host management
-- bearer-token-based authenticated host access
-- session inventory by paired host
-- connected-session Explorer workspace
-- focused session control over the dedicated remote controller WebSocket
-- observer vs controller state in the focused terminal
-- local client-side notifications for subscribed:
-  - session became quiet
-  - session stopped
+- focused terminal scroll behavior still needs tuning
+- terminal redraw behavior under heavy live output still needs more polish
+- canonical snapshot support should remain the preferred path when the runtime provides it consistently
 
-## Current Screen Roles
+## Out Of Scope
 
-- Pairing
-  - discover hosts
-  - request pairing
-  - claim and save trusted hosts
-- Inventory
-  - list sessions by host
-  - create, stop, clear ended sessions
-  - subscribe a session for notifications
-- Explorer
-  - connected-session workspace
-  - compact terminal previews only
-  - no direct control from the mini view
-- Focused session
-  - primary interactive terminal
-  - request or release control
-  - direct terminal input and resize
-  - prompt editor and session context
-- Activity
-  - local audit-style event log
-- Config
-  - notification preferences
-  - quiet notification threshold
-
-## Runtime Alignment
-
-The iOS client assumes the current runtime model:
-
-- one PTY per session
-- many observers
-- one active controller
-- observer session WebSocket for metadata and replay-style updates
-- dedicated controller WebSocket for low-latency focused control
-
-The intended iOS flow is:
-
-- Inventory and Explorer stay observer-oriented
-- the focused session requests control only when needed
-- the focused terminal is the only interactive control surface
-
-## Known MVP Limits
-
-- initial render after attach/control can still be imperfect until the remote program repaints
-- the terminal renderer is still `xterm.js` inside `WKWebView`
-- local notifications only work while the app is alive enough to observe runtime changes
-- there is no APNs push system yet
-- compact Explorer previews are intentionally lower fidelity than the focused terminal
-
-## Explicit Non-Goals
-
-Current MVP does not try to solve:
-
+- APNs push notifications
 - internet relay or tunnel access
-- user-account or multi-user identity management
-- push notifications through APNs
-- perfect first-frame terminal reconstruction
+- multi-user identity or account system
 - multiple simultaneous controllers
-- full native terminal replacement for `xterm.js`
+- turning Explorer mini terminals into full control surfaces
 
-## Current Direction
+## Working Rule
 
-The iOS client should keep moving toward:
+When notes conflict with the app, trust:
 
-- a clean native supervision client
-- focused-view-first terminal quality
-- preview-only compact explorer tiles
-- stricter reuse of shared session badge and formatting utilities
+- [SentritsIOSApp.swift](SentritsIOS/App/SentritsIOSApp.swift)
+- [AppShellView.swift](SentritsIOS/App/AppShellView.swift)
+- [SessionViewModel.swift](SentritsIOS/ViewModels/SessionViewModel.swift)
+- [TerminalTextView.swift](SentritsIOS/Views/TerminalTextView.swift)
