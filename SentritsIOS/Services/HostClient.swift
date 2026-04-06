@@ -182,7 +182,7 @@ actor HostClient {
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
-            logger.error("decode failed for \(path, privacy: .public): \(String(describing: response), privacy: .public)")
+            logDecodeFailure(path: path, response: response, data: data, error: error)
             throw error
         }
     }
@@ -205,9 +205,45 @@ actor HostClient {
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
-            logger.error("decode failed for \(path, privacy: .public): \(String(describing: response), privacy: .public)")
+            logDecodeFailure(path: path, response: response, data: data, error: error)
             throw error
         }
+    }
+
+    private func logDecodeFailure(path: String, response: HTTPURLResponse, data: Data, error: Error) {
+        let bodyPreview = SentritsDebugTrace.summarizeData(data, textLimit: 240, hexLimit: 24)
+        if let decodingError = error as? DecodingError {
+            let reason = Self.describe(decodingError)
+            logger.error(
+                "[ios.focus][decode.failed] path=\(path, privacy: .public) status=\(response.statusCode) reason=\(reason, privacy: .public) body=\(bodyPreview, privacy: .public)"
+            )
+            return
+        }
+        logger.error(
+            "[ios.focus][decode.failed] path=\(path, privacy: .public) status=\(response.statusCode) error=\(error.localizedDescription, privacy: .public) body=\(bodyPreview, privacy: .public)"
+        )
+    }
+
+    private static func describe(_ error: DecodingError) -> String {
+        switch error {
+        case let .typeMismatch(type, context):
+            return "typeMismatch(\(type)) path=\(codingPath(context.codingPath)) debug=\(context.debugDescription)"
+        case let .valueNotFound(type, context):
+            return "valueNotFound(\(type)) path=\(codingPath(context.codingPath)) debug=\(context.debugDescription)"
+        case let .keyNotFound(key, context):
+            return "keyNotFound(\(key.stringValue)) path=\(codingPath(context.codingPath)) debug=\(context.debugDescription)"
+        case let .dataCorrupted(context):
+            return "dataCorrupted path=\(codingPath(context.codingPath)) debug=\(context.debugDescription)"
+        @unknown default:
+            return "unknown DecodingError"
+        }
+    }
+
+    private static func codingPath(_ path: [CodingKey]) -> String {
+        if path.isEmpty {
+            return "<root>"
+        }
+        return path.map(\.stringValue).joined(separator: ".")
     }
 
     private func requestData(

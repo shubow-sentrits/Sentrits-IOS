@@ -104,6 +104,18 @@ private struct TerminalSurfaceCallbacks {
     let onResize: (TerminalResize) -> Void
 }
 
+private func summarizeBase64Chunks(_ chunks: [String], limit: Int = 1) -> String {
+    guard !chunks.isEmpty else { return "empty" }
+    let summaries = chunks.prefix(limit).compactMap { chunk -> String? in
+        guard let data = Data(base64Encoded: chunk) else { return nil }
+        return SentritsDebugTrace.summarizeData(data)
+    }
+    if summaries.isEmpty {
+        return "undecodable"
+    }
+    return summaries.joined(separator: " | ")
+}
+
 private struct SwiftTermTerminalRendererView: UIViewRepresentable {
     let model: TerminalSurfaceModel
     let callbacks: TerminalSurfaceCallbacks
@@ -178,7 +190,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "swiftterm.bootstrap",
-                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count)"
+                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count) summary=\(summarizeBase64Chunks(parent.model.bootstrapChunksBase64))"
                 )
                 resetTerminalView(terminalView)
                 for chunk in parent.model.bootstrapChunksBase64 {
@@ -195,6 +207,13 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
 
             guard parent.model.outputChunksBase64.count > lastRenderedChunkCount else { return }
             let newChunks = Array(parent.model.outputChunksBase64[lastRenderedChunkCount...])
+            if parent.model.mode == .focused && parent.model.isInputEnabled {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "swiftterm.append",
+                    "chunks=\(newChunks.count) summary=\(summarizeBase64Chunks(newChunks))"
+                )
+            }
             for chunk in newChunks {
                 feed(base64Chunk: chunk, to: terminalView)
             }
@@ -397,7 +416,7 @@ private struct XtermTerminalRendererView: UIViewRepresentable {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "renderer.bootstrap",
-                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count)"
+                    "token=\(parent.model.bootstrapToken) chunks=\(parent.model.bootstrapChunksBase64.count) summary=\(summarizeBase64Chunks(parent.model.bootstrapChunksBase64))"
                 )
                 lastRenderedChunkCount = 0
                 evaluate(
@@ -413,6 +432,13 @@ private struct XtermTerminalRendererView: UIViewRepresentable {
 
             guard parent.model.outputChunksBase64.count > lastRenderedChunkCount else { return }
             let newChunks = Array(parent.model.outputChunksBase64[lastRenderedChunkCount...])
+            if parent.model.mode == .focused && parent.model.isInputEnabled {
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "renderer.append",
+                    "chunks=\(newChunks.count) summary=\(summarizeBase64Chunks(newChunks))"
+                )
+            }
             evaluate("window.vibeTerminal.appendBase64Chunks(\(jsonString(from: newChunks)))", in: webView)
             lastRenderedChunkCount = parent.model.outputChunksBase64.count
         }

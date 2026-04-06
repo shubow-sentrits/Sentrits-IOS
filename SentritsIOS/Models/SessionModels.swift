@@ -203,11 +203,18 @@ struct TerminalResize: Equatable {
 enum SentritsDebugTrace {
     private static let logger = Logger(subsystem: "com.vibeeverywhere.ios", category: "SentritsDebug")
 
-    static func log(_ scope: String, _ event: String, _ details: @autoclosure () -> String) {
+    static var isEnabled: Bool {
 #if DEBUG
         let environment = ProcessInfo.processInfo.environment
-        let enabled = environment["SENTRITS_DEBUG_TRACE"] == "1" || environment["SENTRITS_DEBUG_TRACE"] == "true"
-        guard enabled else { return }
+        return environment["SENTRITS_DEBUG_TRACE"] == "1" || environment["SENTRITS_DEBUG_TRACE"] == "true"
+#else
+        return false
+#endif
+    }
+
+    static func log(_ scope: String, _ event: String, _ details: @autoclosure () -> String) {
+#if DEBUG
+        guard isEnabled else { return }
         let message = details()
         logger.debug("[\(scope, privacy: .public)][\(event, privacy: .public)] \(message, privacy: .public)")
 #else
@@ -220,13 +227,42 @@ enum SentritsDebugTrace {
     static func shouldTraceHTTP(_ path: String) -> Bool {
 #if DEBUG
         return path.contains("/snapshot") ||
-            path == "/sessions" ||
-            path == "/host/info" ||
             path.contains("/controller") ||
             path.contains("/ws/")
 #else
         _ = path
         return false
 #endif
+    }
+
+    static func summarizeText(_ text: String, limit: Int = 80) -> String {
+        guard !text.isEmpty else { return "empty" }
+        let prefix = String(text.prefix(limit))
+        let escaped = prefix
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\u{1B}", with: "\\e")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\t", with: "\\t")
+        return text.count > limit ? "\(escaped)..." : escaped
+    }
+
+    static func summarizeData(_ data: Data, textLimit: Int = 80, hexLimit: Int = 16) -> String {
+        guard !data.isEmpty else { return "empty" }
+        let text = String(decoding: data, as: UTF8.self)
+        let hexBytes = data.prefix(hexLimit).map { String(format: "%02x", $0) }.joined(separator: " ")
+        return "text=\"\(summarizeText(text, limit: textLimit))\" hex=\(hexBytes)"
+    }
+
+    static func summarizeBase64Chunks(_ chunks: [String], limit: Int = 1) -> String {
+        guard !chunks.isEmpty else { return "empty" }
+        let summaries = chunks.prefix(limit).compactMap { chunk -> String? in
+            guard let data = Data(base64Encoded: chunk) else { return nil }
+            return summarizeData(data)
+        }
+        if summaries.isEmpty {
+            return "undecodable"
+        }
+        return summaries.joined(separator: " | ")
     }
 }
