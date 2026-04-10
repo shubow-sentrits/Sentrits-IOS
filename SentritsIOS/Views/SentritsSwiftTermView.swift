@@ -3,6 +3,8 @@ import UIKit
 
 final class SentritsSwiftTermView: TerminalView {
     private var preservedTopVisibleRow: Int?
+    private var userDetachedFromLiveBottom = false
+    private let liveBottomThresholdRows = 1
 
     private var terminalRowCount: Int {
         max(getTerminal().rows, 1)
@@ -29,55 +31,56 @@ final class SentritsSwiftTermView: TerminalView {
         return max(0, totalRows - terminalRowCount)
     }
 
-    @MainActor
-    func preserveViewportAnchor() {
-        preservedTopVisibleRow = currentTopVisibleRow
+    private var isNearLiveBottom: Bool {
+        maximumTopVisibleRow - currentTopVisibleRow <= liveBottomThresholdRows
     }
 
     @MainActor
-    func restoreViewportAfterTerminalUpdate() {
+    private func refreshLiveBottomState() {
+        userDetachedFromLiveBottom = !isNearLiveBottom
+    }
+
+    @MainActor
+    func beginProgrammaticUpdatePreservingViewportIfNeeded() {
+        refreshLiveBottomState()
+        preservedTopVisibleRow = userDetachedFromLiveBottom ? currentTopVisibleRow : nil
+    }
+
+    @MainActor
+    func endProgrammaticUpdatePreservingViewportIfNeeded() {
         let lineHeight = rowHeight
         guard lineHeight > 0 else {
             preservedTopVisibleRow = nil
+            refreshLiveBottomState()
             return
         }
 
-        let terminal = getTerminal()
-        let cursor = terminal.getCursorLocation()
-        let absoluteCursorRow = terminal.getTopVisibleRow() + cursor.y
-        var desiredTop = min(max(preservedTopVisibleRow ?? currentTopVisibleRow, 0), maximumTopVisibleRow)
-
-        if absoluteCursorRow < desiredTop {
-            desiredTop = absoluteCursorRow
-        } else if absoluteCursorRow >= desiredTop + terminalRowCount {
-            desiredTop = absoluteCursorRow - terminalRowCount + 1
-        }
-
-        desiredTop = min(max(desiredTop, 0), maximumTopVisibleRow)
-        let desiredOffsetY = CGFloat(desiredTop) * lineHeight
-        if abs(contentOffset.y - desiredOffsetY) > 0.5 {
-            contentOffset = CGPoint(x: contentOffset.x, y: desiredOffsetY)
+        if let preservedTopVisibleRow {
+            let desiredTop = min(max(preservedTopVisibleRow, 0), maximumTopVisibleRow)
+            let desiredOffsetY = CGFloat(desiredTop) * lineHeight
+            if abs(contentOffset.y - desiredOffsetY) > 0.5 {
+                contentOffset = CGPoint(x: contentOffset.x, y: desiredOffsetY)
+            }
         }
         preservedTopVisibleRow = nil
+        refreshLiveBottomState()
     }
 
     override func sizeChanged(source: Terminal) {
-        preserveViewportAnchor()
+        beginProgrammaticUpdatePreservingViewportIfNeeded()
         super.sizeChanged(source: source)
         DispatchQueue.main.async { [weak self] in
-            self?.restoreViewportAfterTerminalUpdate()
+            self?.endProgrammaticUpdatePreservingViewportIfNeeded()
         }
     }
 
     override func scrolled(source terminal: Terminal, yDisp: Int) {
-        preserveViewportAnchor()
         super.scrolled(source: terminal, yDisp: yDisp)
-        restoreViewportAfterTerminalUpdate()
+        refreshLiveBottomState()
     }
 
     override func showCursor(source: Terminal) {
-        preserveViewportAnchor()
         super.showCursor(source: source)
-        restoreViewportAfterTerminalUpdate()
+        refreshLiveBottomState()
     }
 }

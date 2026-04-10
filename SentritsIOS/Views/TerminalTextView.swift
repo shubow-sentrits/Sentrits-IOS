@@ -223,7 +223,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
         @MainActor
         private func applyMode(to terminalView: TerminalView) {
             let swiftTermView = terminalView as? SentritsSwiftTermView
-            swiftTermView?.preserveViewportAnchor()
+            swiftTermView?.beginProgrammaticUpdatePreservingViewportIfNeeded()
             if let resize = parent.model.observerDimensions {
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
@@ -233,30 +233,30 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
                 } else {
                     _ = terminalView.resignFirstResponder()
                 }
-                swiftTermView?.restoreViewportAfterTerminalUpdate()
+                swiftTermView?.endProgrammaticUpdatePreservingViewportIfNeeded()
             }
         }
 
         @MainActor
         private func resetTerminalView(_ terminalView: TerminalView) {
             let swiftTermView = terminalView as? SentritsSwiftTermView
-            swiftTermView?.preserveViewportAnchor()
+            swiftTermView?.beginProgrammaticUpdatePreservingViewportIfNeeded()
             terminalView.getTerminal().resetToInitialState()
             if let resize = parent.model.observerDimensions {
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
             terminalView.setNeedsDisplay()
-            swiftTermView?.restoreViewportAfterTerminalUpdate()
+            swiftTermView?.endProgrammaticUpdatePreservingViewportIfNeeded()
         }
 
         @MainActor
         private func feed(base64Chunk: String, to terminalView: TerminalView) {
             guard let data = Data(base64Encoded: base64Chunk) else { return }
             let swiftTermView = terminalView as? SentritsSwiftTermView
-            swiftTermView?.preserveViewportAnchor()
+            swiftTermView?.beginProgrammaticUpdatePreservingViewportIfNeeded()
             terminalView.feed(byteArray: Array(data)[...])
             terminalView.setNeedsDisplay()
-            swiftTermView?.restoreViewportAfterTerminalUpdate()
+            swiftTermView?.endProgrammaticUpdatePreservingViewportIfNeeded()
         }
 
         func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
