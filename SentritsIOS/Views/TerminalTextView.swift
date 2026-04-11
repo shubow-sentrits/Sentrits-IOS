@@ -141,7 +141,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
         context.coordinator.synchronizeRendererIfNeeded()
     }
 
-    final class Coordinator: NSObject, TerminalViewDelegate {
+    final class Coordinator: NSObject, @MainActor TerminalViewDelegate {
         var parent: SwiftTermTerminalRendererView
         weak var terminalView: TerminalView?
 
@@ -259,7 +259,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
             swiftTermView?.endProgrammaticUpdatePreservingViewportIfNeeded()
         }
 
-        func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
+        @MainActor func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
             let onResize = parent.callbacks.onResize
             DispatchQueue.main.async {
                 onResize(TerminalResize(cols: newCols, rows: newRows))
@@ -270,7 +270,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
 
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
 
-        func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        @MainActor func send(source: TerminalView, data: ArraySlice<UInt8>) {
             let payload = String(decoding: Array(data), as: UTF8.self)
             let onInput = parent.callbacks.onInput
             DispatchQueue.main.async {
