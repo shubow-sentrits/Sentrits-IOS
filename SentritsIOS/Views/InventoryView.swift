@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct InventoryView: View {
+    struct CreateSheetContext: Identifiable {
+        let host: SavedHost
+        let token: String
+
+        var id: UUID { host.id }
+    }
+
     @ObservedObject var hostsStore: HostsStore
     let tokenStore: TokenStore
     @ObservedObject var activityStore: ActivityLogStore
@@ -9,7 +16,7 @@ struct InventoryView: View {
     let onOpenExplorer: () -> Void
 
     @ObservedObject private var store: InventoryStore
-    @State private var createSheetHost: SavedHost?
+    @State private var createSheetHost: CreateSheetContext?
     @State private var inventoryError: String?
     @State private var clearStoppedHost: SavedHost?
     private let autoRefreshOnAppear: Bool
@@ -70,10 +77,10 @@ struct InventoryView: View {
 
         let withSheets = AnyView(
             withRefresh
-                .sheet(item: $createSheetHost) { host in
-                    CreateSessionSheet(host: host) { input in
+                .sheet(item: $createSheetHost) { context in
+                    CreateSessionSheet(host: context.host, token: context.token) { input in
                         do {
-                            _ = try await store.createSession(hostID: host.id, input: input)
+                            _ = try await store.createSession(hostID: context.host.id, input: input)
                         } catch {
                             inventoryError = error.localizedDescription
                         }
@@ -266,7 +273,9 @@ struct InventoryView: View {
                     }
 
                     Button {
-                        createSheetHost = section.host
+                        if let token = section.token {
+                            createSheetHost = CreateSheetContext(host: section.host, token: token)
+                        }
                     } label: {
                         Label("New Session", systemImage: "plus")
                             .font(.footnote.weight(.bold))
@@ -553,10 +562,15 @@ struct InventoryView: View {
 
 private struct CreateSessionSheet: View {
     let host: SavedHost
+    let token: String
     let onSubmit: (CreateSessionInput) async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var input = CreateSessionInput()
+    @State private var setups: [SessionSetup] = []
+    @State private var isLoadingSetups = false
+    @State private var isSavingSetup = false
+    @State private var setupStatus: String?
     @State private var isSubmitting = false
 
     var body: some View {
@@ -569,8 +583,41 @@ private struct CreateSessionSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Saved Setup") {
+                    Picker("Setup", selection: $input.selectedSetupID) {
+                        Text("Custom launch").tag("")
+                        ForEach(setups) { setup in
+                            Text(setup.name).tag(setup.setupId)
+                        }
+                    }
+                    .onChange(of: input.selectedSetupID) { _, newValue in
+                        guard let setup = setups.first(where: { $0.setupId == newValue }) else { return }
+                        apply(setup: setup)
+                    }
+
+                    TextField("Setup name", text: $input.setupName)
+                    Button(isSavingSetup ? "Saving…" : "Save Setup") {
+                        Task { await saveSetup() }
+                    }
+                    .disabled(isSavingSetup || input.normalizedWorkspaceRoot.isEmpty)
+
+                    if let setupStatus {
+                        Text(setupStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Session") {
                     TextField("Workspace path", text: $input.workspaceRoot)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Picker("Launch Mode", selection: $input.launchMode) {
+                        ForEach(SessionLaunchMode.allCases) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    TextField(input.launchMode == .shell ? "Shell command" : "Command", text: $input.commandText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     TextField("Title", text: $input.title)
@@ -579,12 +626,18 @@ private struct CreateSessionSheet: View {
                             Text(provider.label).tag(provider)
                         }
                     }
+                    TextField("Conversation ID", text: $input.conversationId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                     TextField("Group tags (comma separated)", text: $input.groupTagsText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
             }
             .navigationTitle("New Session")
+            .task {
+                await loadSetups()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
@@ -603,6 +656,49 @@ private struct CreateSessionSheet: View {
                     .disabled(isSubmitting || input.normalizedWorkspaceRoot.isEmpty)
                 }
             }
+        }
+    }
+
+    private func loadSetups() async {
+        isLoadingSetups = true
+        defer { isLoadingSetups = false }
+        do {
+            setups = try await HostClient(host: host).fetchSessionSetups(for: host, token: token)
+        } catch {
+            setupStatus = error.localizedDescription
+        }
+    }
+
+    private func saveSetup() async {
+        isSavingSetup = true
+        defer { isSavingSetup = false }
+        do {
+            let saved = try await HostClient(host: host).saveSessionSetup(host: host, token: token, input: input)
+            input.selectedSetupID = saved.setupId
+            input.setupName = saved.name
+            setups = try await HostClient(host: host).fetchSessionSetups(for: host, token: token)
+            setupStatus = "Saved \(saved.name)."
+        } catch {
+            setupStatus = error.localizedDescription
+        }
+    }
+
+    private func apply(setup: SessionSetup) {
+        input.setupName = setup.name
+        input.provider = SessionProvider(rawValue: setup.provider) ?? .codex
+        input.workspaceRoot = setup.workspaceRoot
+        input.title = setup.title
+        input.conversationId = setup.conversationId ?? ""
+        input.groupTagsText = (setup.groupTags ?? []).joined(separator: ", ")
+        if let shell = setup.commandShell, !shell.isEmpty {
+            input.launchMode = .shell
+            input.commandText = shell
+        } else if let argv = setup.commandArgv, !argv.isEmpty {
+            input.launchMode = .argv
+            input.commandText = argv.joined(separator: " ")
+        } else {
+            input.launchMode = .providerDefault
+            input.commandText = ""
         }
     }
 }

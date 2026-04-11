@@ -200,10 +200,41 @@ struct HostInfo: Codable {
     let adminPort: Int?
     let remoteHost: String?
     let remotePort: Int?
+    let sessionSetupCount: Int?
     let version: String?
     let capabilities: [String]?
     let pairingMode: String?
     let tls: HostTLSInfo?
+}
+
+enum SessionLaunchMode: String, CaseIterable, Identifiable, Codable {
+    case providerDefault = "provider_default"
+    case argv
+    case shell
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .providerDefault: return "Provider Default"
+        case .argv: return "Exact Argv"
+        case .shell: return "Shell"
+        }
+    }
+}
+
+struct SessionSetup: Codable, Identifiable, Equatable {
+    let setupId: String
+    let name: String
+    let provider: String
+    let workspaceRoot: String
+    let title: String
+    let conversationId: String?
+    let groupTags: [String]?
+    let commandArgv: [String]?
+    let commandShell: String?
+
+    var id: String { setupId }
 }
 
 struct HostTLSInfo: Codable {

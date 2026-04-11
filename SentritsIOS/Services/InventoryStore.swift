@@ -23,6 +23,11 @@ struct CreateSessionInput: Equatable {
     var title: String = ""
     var workspaceRoot: String = ""
     var provider: SessionProvider = .codex
+    var conversationId: String = ""
+    var commandText: String = ""
+    var launchMode: SessionLaunchMode = .providerDefault
+    var selectedSetupID: String = ""
+    var setupName: String = ""
     var groupTagsText: String = ""
 
     var normalizedTitle: String {
@@ -39,11 +44,40 @@ struct CreateSessionInput: Equatable {
         workspaceRoot.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    var normalizedConversationID: String? {
+        conversationId.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    var normalizedSetupID: String? {
+        selectedSetupID.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    var normalizedSetupName: String {
+        setupName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? normalizedTitle
+    }
+
+    var normalizedCommandArgv: [String]? {
+        guard launchMode == .argv else { return nil }
+        let tokens = commandText.split(whereSeparator: \.isWhitespace).map(String.init)
+        return tokens.isEmpty ? nil : tokens
+    }
+
+    var normalizedCommandShell: String? {
+        guard launchMode == .shell else { return nil }
+        return commandText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
     var normalizedGroupTags: [String] {
         groupTagsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
 

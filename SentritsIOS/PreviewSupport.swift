@@ -49,6 +49,7 @@ enum PreviewFixtures {
         adminPort: 18085,
         remoteHost: "192.168.68.57",
         remotePort: 18086,
+        sessionSetupCount: 2,
         version: "0.1.0-alpha",
         capabilities: ["pairing", "sessions", "groups", "terminal"],
         pairingMode: "approval",

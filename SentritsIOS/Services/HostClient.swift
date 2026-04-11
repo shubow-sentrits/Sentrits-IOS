@@ -88,6 +88,25 @@ actor HostClient {
         try await requestJSON(path: "/host/info", endpoint: endpoint, token: nil, method: "GET")
     }
 
+    func fetchSessionSetups(for host: SavedHost, token: String) async throws -> [SessionSetup] {
+        try await requestJSON(path: "/host/setups", endpoint: host.endpoint, token: token, method: "GET")
+    }
+
+    func saveSessionSetup(host: SavedHost, token: String, input: CreateSessionInput) async throws -> SessionSetup {
+        let payload = HostSessionSetupPayload(
+            setupId: input.normalizedSetupID,
+            name: input.normalizedSetupName,
+            provider: input.provider.rawValue,
+            workspaceRoot: input.normalizedWorkspaceRoot,
+            title: input.normalizedTitle,
+            conversationId: input.normalizedConversationID,
+            groupTags: input.normalizedGroupTags,
+            commandArgv: input.normalizedCommandArgv,
+            commandShell: input.normalizedCommandShell
+        )
+        return try await requestJSON(path: "/host/setups", endpoint: host.endpoint, token: token, method: "POST", body: payload)
+    }
+
     func startPairing(for host: SavedHost, deviceName: String) async throws -> PairingRequestResponse {
         let body = PairingRequestPayload(deviceName: deviceName, deviceType: "mobile")
         return try await requestJSON(path: "/pairing/request", endpoint: host.endpoint, token: nil, method: "POST", body: body)
@@ -146,9 +165,13 @@ actor HostClient {
 
     func createSession(host: SavedHost, token: String, input: CreateSessionInput) async throws -> SessionSummary {
         let payload = CreateSessionPayload(
+            setupId: input.normalizedSetupID,
             provider: input.provider.rawValue,
             workspaceRoot: input.normalizedWorkspaceRoot,
             title: input.normalizedTitle,
+            conversationId: input.normalizedConversationID,
+            commandArgv: input.normalizedCommandArgv,
+            commandShell: input.normalizedCommandShell,
             groupTags: input.normalizedGroupTags
         )
         return try await requestJSON(path: "/sessions", endpoint: host.endpoint, token: token, method: "POST", body: payload)
@@ -303,10 +326,26 @@ actor HostClient {
 }
 
 private struct CreateSessionPayload: Encodable {
+    let setupId: String?
     let provider: String
     let workspaceRoot: String
     let title: String
+    let conversationId: String?
+    let commandArgv: [String]?
+    let commandShell: String?
     let groupTags: [String]
+}
+
+private struct HostSessionSetupPayload: Encodable {
+    let setupId: String?
+    let name: String
+    let provider: String
+    let workspaceRoot: String
+    let title: String
+    let conversationId: String?
+    let groupTags: [String]
+    let commandArgv: [String]?
+    let commandShell: String?
 }
 
 private struct SessionGroupTagsUpdateRequest: Encodable {
