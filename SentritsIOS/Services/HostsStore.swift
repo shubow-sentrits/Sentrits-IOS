@@ -201,6 +201,47 @@ final class HostsStore: ObservableObject {
         persist()
     }
 
+    func updateAlias(for hostID: UUID, alias: String?) {
+        guard let index = savedHosts.firstIndex(where: { $0.id == hostID }) else { return }
+        savedHosts[index].alias = alias?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let updatedHost = savedHosts[index]
+        sortHosts()
+        persist()
+
+        if let selectedHost, selectedHost.host.id == hostID {
+            self.selectedHost = SelectedHostDetail(
+                source: selectedHost.source,
+                host: updatedHost,
+                discovery: selectedHost.discovery,
+                hostInfo: selectedHost.hostInfo,
+                lastSeenAt: selectedHost.lastSeenAt,
+                isSaved: true,
+                hasToken: tokenStore.token(for: updatedHost.tokenKey) != nil
+            )
+        }
+    }
+
+    func syncSavedHostMetadata(hostID: UUID, hostInfo: HostInfo) {
+        guard let index = savedHosts.firstIndex(where: { $0.id == hostID }) else { return }
+        let updatedHost = savedHosts[index].merged(hostInfo: hostInfo).withID(savedHosts[index].id)
+        guard updatedHost != savedHosts[index] else { return }
+        savedHosts[index] = updatedHost
+        sortHosts()
+        persist()
+
+        if let selectedHost, selectedHost.host.id == hostID {
+            self.selectedHost = SelectedHostDetail(
+                source: selectedHost.source,
+                host: updatedHost,
+                discovery: selectedHost.discovery,
+                hostInfo: hostInfo,
+                lastSeenAt: selectedHost.lastSeenAt,
+                isSaved: true,
+                hasToken: tokenStore.token(for: updatedHost.tokenKey) != nil
+            )
+        }
+    }
+
     private func refreshSelectedHostDetails(
         for host: SavedHost,
         source: SelectionSource,

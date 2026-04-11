@@ -393,6 +393,31 @@ struct PairingView: View {
 
                     detailRow("Host ID", value: selectedHost.host.hostId ?? selectedHost.hostInfo?.hostId ?? "Unknown")
                     detailRow("Display Name", value: selectedHost.hostInfo?.displayName ?? selectedHost.host.displayName)
+                    if selectedHost.isSaved {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Alias")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.white.opacity(0.52))
+                            TextField("Alias (optional)", text: $connectViewModel.hostAlias)
+                                .textFieldStyle(.plain)
+                                .padding(12)
+                                .background(cardRowBackground)
+                                .foregroundStyle(.white)
+                            Text("Alias is local to this client. Leave it empty to use the host display name.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.white.opacity(0.52))
+                            Button("Update Alias") {
+                                hostsStore.updateAlias(for: selectedHost.host.id, alias: connectViewModel.alias)
+                                activityStore.record(
+                                    category: .system,
+                                    title: "Host alias updated",
+                                    message: "Updated the local alias for the selected host.",
+                                    hostLabel: selectedHost.host.displayName
+                                )
+                            }
+                            .buttonStyle(ActionButtonStyle(fill: Color.white.opacity(0.10)))
+                        }
+                    }
                     detailRow("TLS", value: selectedHost.host.useTLS ? "enabled" : "disabled")
                     detailRow("Token", value: selectedHost.hasToken ? "saved" : "not saved")
                     if let version = selectedHost.hostInfo?.version {

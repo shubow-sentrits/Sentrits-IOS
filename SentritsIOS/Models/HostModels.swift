@@ -105,9 +105,17 @@ struct SavedHost: Codable, Identifiable, Equatable, Hashable {
         HostEndpoint(address: address, port: port, useTLS: useTLS, allowSelfSignedTLS: allowSelfSignedTLS)
     }
 
+    var preferredAlias: String? {
+        guard let alias = alias?.trimmedNilIfEmpty,
+              alias.caseInsensitiveCompare(displayName) != .orderedSame else {
+            return nil
+        }
+        return alias
+    }
+
     var displayLabel: String {
-        if let alias = alias?.trimmedNilIfEmpty {
-            return "\(alias) · \(displayName)"
+        if let preferredAlias {
+            return "\(preferredAlias) · \(displayName)"
         }
         return displayName
     }
@@ -117,7 +125,7 @@ struct SavedHost: Codable, Identifiable, Equatable, Hashable {
     }
 
     var secondaryLabel: String {
-        if alias?.trimmedNilIfEmpty != nil {
+        if preferredAlias != nil {
             return "\(displayName) · \(detailLabel)"
         }
         return detailLabel

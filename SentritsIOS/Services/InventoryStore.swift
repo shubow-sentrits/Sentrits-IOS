@@ -127,9 +127,11 @@ final class InventoryStore: ObservableObject {
                     )
                 }
 
+                hostsStore.syncSavedHostMetadata(hostID: host.id, hostInfo: fetchedHostInfo)
+                let refreshedHost = hostsStore.savedHosts.first(where: { $0.id == host.id }) ?? host
                 nextSections.append(
                     InventoryDeviceSection(
-                        host: host,
+                        host: refreshedHost,
                         token: token,
                         sessions: sortSessions(fetchedSessions),
                         hostInfo: fetchedHostInfo,
