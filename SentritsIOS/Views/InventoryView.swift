@@ -127,7 +127,7 @@ struct InventoryView: View {
     }
 
     private func hostTitle(_ host: SavedHost) -> String {
-        if let alias = host.alias, !alias.isEmpty {
+        if let alias = host.preferredAlias {
             return alias
         }
         if !host.displayName.isEmpty {
@@ -234,10 +234,8 @@ struct InventoryView: View {
                     Text("\(section.host.address):\(section.host.port)")
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(Color.white.opacity(0.54))
-                    if let displayName = section.hostInfo?.displayName,
-                       !displayName.isEmpty,
-                       displayName != section.host.displayName {
-                        Text(displayName)
+                    if let alias = section.host.preferredAlias {
+                        Text(section.host.displayName)
                             .font(.caption)
                             .foregroundStyle(Color("InventoryAccent").opacity(0.92))
                     }

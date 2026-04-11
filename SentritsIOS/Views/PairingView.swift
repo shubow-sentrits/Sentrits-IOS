@@ -150,12 +150,16 @@ struct PairingView: View {
     private var discoveryCard: some View {
         card {
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader("Active Discovery", detail: "\(hostsStore.discoveredHosts.count) live")
-                if hostsStore.discoveredHosts.isEmpty {
-                    Text("Waiting for UDP broadcasts on port 18087.")
-                        .foregroundStyle(Color.white.opacity(0.62))
+                sectionHeader("New Devices", detail: "\(hostsStore.newDiscoveredHosts.count) live")
+                if hostsStore.newDiscoveredHosts.isEmpty {
+                    Text(
+                        hostsStore.discoveredHosts.isEmpty
+                            ? "Waiting for UDP broadcasts on port 18087."
+                            : "Live discovery only found devices that are already saved."
+                    )
+                    .foregroundStyle(Color.white.opacity(0.62))
                 } else {
-                    ForEach(hostsStore.discoveredHosts) { host in
+                    ForEach(hostsStore.newDiscoveredHosts) { host in
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 5) {
@@ -171,7 +175,7 @@ struct PairingView: View {
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 5) {
-                                    statusChip(hostsStore.hostState(for: host))
+                                    statusChip("New")
                                     Text(host.age < 2 ? "just now" : "\(Int(host.age))s ago")
                                         .font(.caption)
                                         .foregroundStyle(Color.white.opacity(0.52))
@@ -192,16 +196,12 @@ struct PairingView: View {
                                 .buttonStyle(.bordered)
                                 .tint(Color.white.opacity(0.78))
 
-                                if hostsStore.hostState(for: host) == "Paired" {
-                                    statusChip("Paired")
-                                } else {
-                                    Button("Pair") {
-                                        hostsStore.selectDiscoveredHost(host)
-                                        isHostDetailPresented = true
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(Color("InventoryAccent"))
+                                Button("Pair") {
+                                    hostsStore.selectDiscoveredHost(host)
+                                    isHostDetailPresented = true
                                 }
+                                .buttonStyle(.borderedProminent)
+                                .tint(Color("InventoryAccent"))
                             }
                         }
                         .padding(14)
@@ -323,7 +323,10 @@ struct PairingView: View {
                                         .foregroundStyle(Color.white.opacity(0.62))
                                 }
                                 Spacer()
-                                statusChip(hostsStore.token(for: host) == nil ? "Saved" : "Paired")
+                                HStack(spacing: 6) {
+                                    statusChip(hostsStore.token(for: host) == nil ? "Saved" : "Paired")
+                                    statusChip(hostsStore.isHostOnline(host) ? "Online" : "Offline")
+                                }
                             }
 
                             HStack(spacing: 10) {
@@ -390,6 +393,31 @@ struct PairingView: View {
 
                     detailRow("Host ID", value: selectedHost.host.hostId ?? selectedHost.hostInfo?.hostId ?? "Unknown")
                     detailRow("Display Name", value: selectedHost.hostInfo?.displayName ?? selectedHost.host.displayName)
+                    if selectedHost.isSaved {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Alias")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.white.opacity(0.52))
+                            TextField("Alias (optional)", text: $connectViewModel.hostAlias)
+                                .textFieldStyle(.plain)
+                                .padding(12)
+                                .background(cardRowBackground)
+                                .foregroundStyle(.white)
+                            Text("Alias is local to this client. Leave it empty to use the host display name.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.white.opacity(0.52))
+                            Button("Update Alias") {
+                                hostsStore.updateAlias(for: selectedHost.host.id, alias: connectViewModel.alias)
+                                activityStore.record(
+                                    category: .system,
+                                    title: "Host alias updated",
+                                    message: "Updated the local alias for the selected host.",
+                                    hostLabel: selectedHost.host.displayName
+                                )
+                            }
+                            .buttonStyle(ActionButtonStyle(fill: Color.white.opacity(0.10)))
+                        }
+                    }
                     detailRow("TLS", value: selectedHost.host.useTLS ? "enabled" : "disabled")
                     detailRow("Token", value: selectedHost.hasToken ? "saved" : "not saved")
                     if let version = selectedHost.hostInfo?.version {
