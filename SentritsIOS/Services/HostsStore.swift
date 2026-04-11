@@ -80,6 +80,14 @@ final class HostsStore: ObservableObject {
         tokenStore.token(for: host.tokenKey)
     }
 
+    var newDiscoveredHosts: [DiscoveredHost] {
+        discoveredHosts.filter { matchingSavedHost(for: $0.identity, endpoint: $0.endpoint) == nil }
+    }
+
+    func isHostOnline(_ host: SavedHost) -> Bool {
+        matchingDiscoveredHost(for: host) != nil
+    }
+
     func hostState(for discoveredHost: DiscoveredHost) -> String {
         if let savedHost = matchingSavedHost(for: discoveredHost.identity, endpoint: discoveredHost.endpoint),
            tokenStore.token(for: savedHost.tokenKey) != nil {
@@ -327,6 +335,14 @@ final class HostsStore: ObservableObject {
             return matched
         }
         return savedHosts.first(where: { $0.address == host.address && $0.port == host.port && $0.useTLS == host.useTLS })
+    }
+
+    private func matchingDiscoveredHost(for host: SavedHost) -> DiscoveredHost? {
+        if let hostId = host.hostId,
+           let matched = discoveredHosts.first(where: { $0.identity.hostId == hostId }) {
+            return matched
+        }
+        return discoveredHosts.first(where: { $0.endpoint == host.endpoint })
     }
     private static func preferredDiscoveryAddress(advertisedHost: String, sourceAddress: String) -> String {
         guard let normalized = advertisedHost.nilIfEmpty else {
