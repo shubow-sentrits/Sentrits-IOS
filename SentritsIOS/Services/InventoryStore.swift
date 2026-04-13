@@ -195,6 +195,15 @@ final class InventoryStore: ObservableObject {
         sections = sortedSections
         lastRefreshAtUnixMs = now
         errorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n")
+
+        // Remove subscription state for sessions no longer present on any host.
+        // This prevents stale keys from accumulating and ensures a session that is
+        // deleted and re-created with the same ID starts with notifications off.
+        let liveSessionKeys = Set(sortedSections.flatMap { section in
+            section.sessions.map { $0.notificationKey(hostID: section.host.id) }
+        })
+        notificationPreferences.pruneSubscriptions(keepingOnly: liveSessionKeys)
+
         SentritsDebugTrace.log(
             "ios.inventory",
             "refresh.end",

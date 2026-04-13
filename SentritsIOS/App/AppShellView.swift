@@ -28,8 +28,8 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? true
-        self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? true
+        self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? false
+        self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? false
         self.quietThreshold = QuietNotificationThreshold(rawValue: defaults.integer(forKey: quietThresholdKey)) ?? .seconds15
         super.init()
         UNUserNotificationCenter.current().delegate = self
@@ -122,6 +122,12 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
         case .becameQuiet: return quietEnabled
         case .stopped: return stoppedEnabled
         }
+    }
+
+    func pruneSubscriptions(keepingOnly liveKeys: Set<String>) {
+        let stale = subscribedSessionKeys.subtracting(liveKeys)
+        guard !stale.isEmpty else { return }
+        setSubscriptions(sessionKeys: Array(stale), subscribed: false)
     }
 
     func subscriptionStartedAtUnixMs(sessionKey: String) -> Int64? {
