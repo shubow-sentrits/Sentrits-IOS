@@ -28,8 +28,8 @@ final class NotificationPreferencesStore: NSObject, ObservableObject, UNUserNoti
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? false
-        self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? false
+        self.quietEnabled = defaults.object(forKey: quietKey) as? Bool ?? true
+        self.stoppedEnabled = defaults.object(forKey: stoppedKey) as? Bool ?? true
         self.quietThreshold = QuietNotificationThreshold(rawValue: defaults.integer(forKey: quietThresholdKey)) ?? .seconds15
         super.init()
         UNUserNotificationCenter.current().delegate = self
