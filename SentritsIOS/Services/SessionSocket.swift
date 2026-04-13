@@ -155,6 +155,9 @@ final class SessionControllerSocket {
 
     func sendInput(_ data: String) async {
         guard let task, isOpen, let payload = data.data(using: .utf8) else { return }
+        if data.contains("\u{001B}") {
+            SentritsDebugTrace.log("ios.focus", "controller.input.escape", SentritsDebugTrace.summarizeData(payload))
+        }
         do {
             try await task.send(.data(payload))
         } catch {

@@ -319,6 +319,8 @@ final class SessionViewModel: ObservableObject {
         case let .sessionUpdated(metadata):
             let previousStatus = session.status
             let previousController = session.controllerKind
+            let previousPtyCols = session.ptyCols
+            let previousPtyRows = session.ptyRows
             session = SessionSummary(
                 sessionId: metadata.sessionId,
                 provider: metadata.provider,
@@ -379,8 +381,13 @@ final class SessionViewModel: ObservableObject {
                 (activeControllerClientId != nil && metadata.controllerClientId != activeControllerClientId)) {
                 controllerSocket.disconnect(reason: "Control moved to another client.")
             }
+            if focusedTerminalActive, metadata.ptyCols != previousPtyCols || metadata.ptyRows != previousPtyRows {
+                scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
+            }
             publishSessionStateChanged()
         case let .sessionActivity(metadata):
+            let previousActivityPtyCols = session.ptyCols
+            let previousActivityPtyRows = session.ptyRows
             session = SessionSummary(
                 sessionId: session.sessionId,
                 provider: session.provider,
@@ -418,6 +425,11 @@ final class SessionViewModel: ObservableObject {
                 gitStagedCount: metadata.gitStagedCount ?? session.gitStagedCount,
                 gitUntrackedCount: metadata.gitUntrackedCount ?? session.gitUntrackedCount
             )
+            if focusedTerminalActive,
+               metadata.ptyCols != nil && metadata.ptyCols != previousActivityPtyCols ||
+               metadata.ptyRows != nil && metadata.ptyRows != previousActivityPtyRows {
+                scheduleFocusedSnapshotRefresh(delayNanoseconds: 0)
+            }
             publishSessionStateChanged()
         case let .terminalOutput(output):
             guard controllerState != .connected else { return }
@@ -427,7 +439,11 @@ final class SessionViewModel: ObservableObject {
                     scheduleFocusedSnapshotRefresh(delayNanoseconds: 30_000_000)
                     return
                 }
-                SentritsDebugTrace.log("ios.focus", "observer.output.raw", "session=\(session.sessionId) seq=\(output.seqStart)-\(output.seqEnd)")
+                SentritsDebugTrace.log(
+                    "ios.focus",
+                    "observer.output.raw",
+                    "session=\(session.sessionId) seq=\(output.seqStart)-\(output.seqEnd) controllerState=\(String(describing: controllerState)) canonical=\(usesCanonicalFocusedDisplay)"
+                )
             }
             terminal.ingestBase64(output.dataBase64, seqStart: output.seqStart, seqEnd: output.seqEnd)
         case let .sessionExited(payload):
@@ -503,7 +519,7 @@ final class SessionViewModel: ObservableObject {
             SentritsDebugTrace.log(
                 "ios.focus",
                 "control.ready",
-                "session=\(session.sessionId) controllerClientId=\(payload.controllerClientId ?? "nil") resize=\(terminalResize.cols)x\(terminalResize.rows) bootstrapToken=\(terminalBootstrapToken) bootstrapChunks=\(terminalBootstrapChunksBase64.count) bootstrapSummary=\(bootstrapSummary) rawChunksBeforeClear=\(rawChunksBeforeClear) rawChunksAfterClear=\(terminal.outputChunksBase64.count)"
+                "session=\(session.sessionId) controllerClientId=\(payload.controllerClientId ?? "nil") resize=\(terminalResize.cols)x\(terminalResize.rows) focused=\(focusedTerminalActive) canonical=\(usesCanonicalFocusedDisplay) bootstrapToken=\(terminalBootstrapToken) bootstrapChunks=\(terminalBootstrapChunksBase64.count) bootstrapSummary=\(bootstrapSummary) rawChunksBeforeClear=\(rawChunksBeforeClear) rawChunksAfterClear=\(terminal.outputChunksBase64.count)"
             )
             activityStore.record(
                 category: .control,
@@ -676,7 +692,7 @@ final class SessionViewModel: ObservableObject {
             chunks.append("\r\n")
         }
 
-        chunks.append("\u{1B}[2J\u{1B}[H")
+        chunks.append("\u{1B}[0m\u{1B}[2J\u{1B}[H")
         for index in visible.indices {
             chunks.append(visible[index])
             if index < visible.count - 1 {
@@ -715,7 +731,7 @@ final class SessionViewModel: ObservableObject {
             }
         }
 
-        chunks.append("\u{1B}[2J\u{1B}[H")
+        chunks.append("\u{1B}[0m\u{1B}[2J\u{1B}[H")
         for index in visible.indices {
             chunks.append(visible[index])
             if index < visible.count - 1 {

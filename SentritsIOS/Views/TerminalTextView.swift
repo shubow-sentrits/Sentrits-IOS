@@ -169,7 +169,7 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
                 SentritsDebugTrace.log(
                     "ios.focus",
                     "swiftterm.mode",
-                    "focused=\(parent.model.mode == .focused) input=\(parent.model.isInputEnabled) canonical=\(parent.model.useCanonicalDisplay)"
+                    "focused=\(parent.model.mode == .focused) input=\(parent.model.isInputEnabled) canonical=\(parent.model.useCanonicalDisplay) observerDims=\(parent.model.observerDimensions?.cols ?? 0)x\(parent.model.observerDimensions?.rows ?? 0)"
                 )
                 applyMode(to: terminalView)
                 lastMode = parent.model.mode
@@ -224,7 +224,17 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
         private func applyMode(to terminalView: TerminalView) {
             let swiftTermView = terminalView as? SentritsSwiftTermView
             swiftTermView?.beginProgrammaticUpdatePreservingViewportIfNeeded()
-            if let resize = parent.model.observerDimensions {
+            // Preview is always observer-only: size SwiftTerm to PTY dimensions so
+            // raw bytes render at the correct grid. Reset state when dimensions change
+            // so old cells at the old size don't ghost.
+            // Focused canonical mode lets SwiftTerm self-size from its frame (which
+            // drives terminalResize, which drives the viewport snapshot request), so
+            // forcing PTY dimensions here would mismatch the bootstrap.
+            if !parent.model.useCanonicalDisplay, let resize = parent.model.observerDimensions {
+                if resize != lastObserverDimensions {
+                    terminalView.getTerminal().resetToInitialState()
+                    lastRenderedChunkCount = 0
+                }
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
             DispatchQueue.main.async {
@@ -242,7 +252,10 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
             let swiftTermView = terminalView as? SentritsSwiftTermView
             swiftTermView?.beginProgrammaticUpdatePreservingViewportIfNeeded()
             terminalView.getTerminal().resetToInitialState()
-            if let resize = parent.model.observerDimensions {
+            // Only pin SwiftTerm to PTY dimensions in preview mode. Focused canonical
+            // mode relies on SwiftTerm's natural frame-derived size matching the
+            // viewport used to compute the bootstrap ANSI.
+            if !parent.model.useCanonicalDisplay, let resize = parent.model.observerDimensions {
                 terminalView.getTerminal().resize(cols: resize.cols, rows: resize.rows)
             }
             terminalView.setNeedsDisplay()
@@ -271,7 +284,11 @@ private struct SwiftTermTerminalRendererView: UIViewRepresentable {
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
 
         func send(source: TerminalView, data: ArraySlice<UInt8>) {
+            let raw = Data(Array(data))
             let payload = String(decoding: Array(data), as: UTF8.self)
+            if payload.contains("\u{001B}") {
+                SentritsDebugTrace.log("ios.focus", "swiftterm.send.escape", SentritsDebugTrace.summarizeData(raw))
+            }
             let onInput = parent.callbacks.onInput
             DispatchQueue.main.async {
                 onInput(payload)
