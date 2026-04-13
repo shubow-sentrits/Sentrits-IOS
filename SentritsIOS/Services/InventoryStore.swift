@@ -26,8 +26,6 @@ struct CreateSessionInput: Equatable {
     var conversationId: String = ""
     var commandText: String = ""
     var launchMode: SessionLaunchMode = .providerDefault
-    var selectedSetupID: String = ""
-    var setupName: String = ""
     var groupTagsText: String = ""
 
     var normalizedTitle: String {
@@ -46,14 +44,6 @@ struct CreateSessionInput: Equatable {
 
     var normalizedConversationID: String? {
         conversationId.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-    }
-
-    var normalizedSetupID: String? {
-        selectedSetupID.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-    }
-
-    var normalizedSetupName: String {
-        setupName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? normalizedTitle
     }
 
     var normalizedCommandArgv: [String]? {

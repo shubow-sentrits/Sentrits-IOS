@@ -200,7 +200,7 @@ struct HostInfo: Codable {
     let adminPort: Int?
     let remoteHost: String?
     let remotePort: Int?
-    let sessionSetupCount: Int?
+    let launchRecordCount: Int?
     let version: String?
     let capabilities: [String]?
     let pairingMode: String?
@@ -223,18 +223,27 @@ enum SessionLaunchMode: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-struct SessionSetup: Codable, Identifiable, Equatable {
-    let setupId: String
-    let name: String
+struct LaunchRecord: Codable, Identifiable, Equatable {
+    let recordId: String
     let provider: String
     let workspaceRoot: String
     let title: String
+    let launchedAtUnixMs: Int64
     let conversationId: String?
     let groupTags: [String]?
     let commandArgv: [String]?
     let commandShell: String?
 
-    var id: String { setupId }
+    var id: String { recordId }
+}
+
+struct HostConfigPayload: Encodable {
+    let displayName: String
+    let adminHost: String
+    let adminPort: Int
+    let remoteHost: String
+    let remotePort: Int
+    let providerCommands: [String: [String]]?
 }
 
 struct HostTLSInfo: Codable {

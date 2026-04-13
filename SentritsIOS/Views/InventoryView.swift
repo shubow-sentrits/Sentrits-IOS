@@ -16,7 +16,16 @@ struct InventoryView: View {
     let onOpenExplorer: () -> Void
 
     @ObservedObject private var store: InventoryStore
+    struct HostConfigSheetContext: Identifiable {
+        let host: SavedHost
+        let token: String
+        let hostInfo: HostInfo
+
+        var id: UUID { host.id }
+    }
+
     @State private var createSheetHost: CreateSheetContext?
+    @State private var hostConfigSheetContext: HostConfigSheetContext?
     @State private var inventoryError: String?
     @State private var clearStoppedHost: SavedHost?
     private let autoRefreshOnAppear: Bool
@@ -85,6 +94,9 @@ struct InventoryView: View {
                             inventoryError = error.localizedDescription
                         }
                     }
+                }
+                .sheet(item: $hostConfigSheetContext) { context in
+                    HostConfigSheet(host: context.host, token: context.token, hostInfo: context.hostInfo)
                 }
         )
 
@@ -272,17 +284,31 @@ struct InventoryView: View {
                         .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
                     }
 
-                    Button {
-                        if let token = section.token {
-                            createSheetHost = CreateSheetContext(host: section.host, token: token)
+                    HStack(spacing: 8) {
+                        if let token = section.token, let hostInfo = section.hostInfo {
+                            Button {
+                                hostConfigSheetContext = HostConfigSheetContext(host: section.host, token: token, hostInfo: hostInfo)
+                            } label: {
+                                Image(systemName: "gearshape")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 30, height: 12)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(Color.white.opacity(0.6))
                         }
-                    } label: {
-                        Label("New Session", systemImage: "plus")
-                            .font(.footnote.weight(.bold))
+
+                        Button {
+                            if let token = section.token {
+                                createSheetHost = CreateSheetContext(host: section.host, token: token)
+                            }
+                        } label: {
+                            Label("New Session", systemImage: "plus")
+                                .font(.footnote.weight(.bold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color("InventoryAccent"))
+                        .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color("InventoryAccent"))
-                    .disabled(section.token == nil || store.isBusy(hostID: section.host.id))
                 }
                 .padding(.vertical, -10)
             }
@@ -567,11 +593,13 @@ private struct CreateSessionSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var input = CreateSessionInput()
-    @State private var setups: [SessionSetup] = []
-    @State private var isLoadingSetups = false
-    @State private var isSavingSetup = false
-    @State private var setupStatus: String?
+    @State private var records: [LaunchRecord] = []
+    @State private var selectedRecordID: String = ""
+    @State private var isLoadingRecords = false
+    @State private var recordsError: String?
     @State private var isSubmitting = false
+
+    private var launchModes: [SessionLaunchMode] { [.providerDefault, .shell] }
 
     var body: some View {
         NavigationStack {
@@ -583,28 +611,44 @@ private struct CreateSessionSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Saved Setup") {
-                    Picker("Setup", selection: $input.selectedSetupID) {
-                        Text("Custom launch").tag("")
-                        ForEach(setups) { setup in
-                            Text(setup.name).tag(setup.setupId)
+                Section {
+                    if isLoadingRecords {
+                        HStack {
+                            ProgressView()
+                            Text("Loading recent launches…")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Picker("Recent Launch", selection: $selectedRecordID) {
+                            Text("Custom").tag("")
+                            ForEach(records) { record in
+                                VStack(alignment: .leading) {
+                                    Text(record.title.isEmpty ? record.workspaceRoot : record.title)
+                                    Text(record.workspaceRoot)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .tag(record.recordId)
+                            }
+                        }
+                        .onChange(of: selectedRecordID) { _, newValue in
+                            guard let record = records.first(where: { $0.recordId == newValue }) else { return }
+                            apply(record: record)
+                        }
+
+                        if let recordsError {
+                            Text(recordsError)
+                                .font(.caption)
+                                .foregroundStyle(.red)
                         }
                     }
-                    .onChange(of: input.selectedSetupID) { _, newValue in
-                        guard let setup = setups.first(where: { $0.setupId == newValue }) else { return }
-                        apply(setup: setup)
-                    }
-
-                    TextField("Setup name", text: $input.setupName)
-                    Button(isSavingSetup ? "Saving…" : "Save Setup") {
-                        Task { await saveSetup() }
-                    }
-                    .disabled(isSavingSetup || input.normalizedWorkspaceRoot.isEmpty)
-
-                    if let setupStatus {
-                        Text(setupStatus)
+                } header: {
+                    Text("Recent Launches")
+                } footer: {
+                    if !records.isEmpty {
+                        Text("Selecting a recent launch pre-fills the form.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -613,13 +657,15 @@ private struct CreateSessionSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Picker("Launch Mode", selection: $input.launchMode) {
-                        ForEach(SessionLaunchMode.allCases) { mode in
+                        ForEach(launchModes) { mode in
                             Text(mode.label).tag(mode)
                         }
                     }
-                    TextField(input.launchMode == .shell ? "Shell command" : "Command", text: $input.commandText)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    if input.launchMode == .shell {
+                        TextField("Shell command", text: $input.commandText)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
                     TextField("Title", text: $input.title)
                     Picker("Provider", selection: $input.provider) {
                         ForEach(SessionProvider.allCases) { provider in
@@ -636,7 +682,7 @@ private struct CreateSessionSheet: View {
             }
             .navigationTitle("New Session")
             .task {
-                await loadSetups()
+                await loadRecords()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -645,7 +691,7 @@ private struct CreateSessionSheet: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Create") {
+                    Button(isSubmitting ? "Creating…" : "Create") {
                         Task {
                             isSubmitting = true
                             await onSubmit(input)
@@ -659,46 +705,142 @@ private struct CreateSessionSheet: View {
         }
     }
 
-    private func loadSetups() async {
-        isLoadingSetups = true
-        defer { isLoadingSetups = false }
+    private func loadRecords() async {
+        isLoadingRecords = true
+        defer { isLoadingRecords = false }
         do {
-            setups = try await HostClient(host: host).fetchSessionSetups(for: host, token: token)
+            records = try await HostClient(host: host).fetchLaunchRecords(for: host, token: token)
         } catch {
-            setupStatus = error.localizedDescription
+            recordsError = error.localizedDescription
         }
     }
 
-    private func saveSetup() async {
-        isSavingSetup = true
-        defer { isSavingSetup = false }
-        do {
-            let saved = try await HostClient(host: host).saveSessionSetup(host: host, token: token, input: input)
-            input.selectedSetupID = saved.setupId
-            input.setupName = saved.name
-            setups = try await HostClient(host: host).fetchSessionSetups(for: host, token: token)
-            setupStatus = "Saved \(saved.name)."
-        } catch {
-            setupStatus = error.localizedDescription
-        }
-    }
-
-    private func apply(setup: SessionSetup) {
-        input.setupName = setup.name
-        input.provider = SessionProvider(rawValue: setup.provider) ?? .codex
-        input.workspaceRoot = setup.workspaceRoot
-        input.title = setup.title
-        input.conversationId = setup.conversationId ?? ""
-        input.groupTagsText = (setup.groupTags ?? []).joined(separator: ", ")
-        if let shell = setup.commandShell, !shell.isEmpty {
+    private func apply(record: LaunchRecord) {
+        input.provider = SessionProvider(rawValue: record.provider) ?? .codex
+        input.workspaceRoot = record.workspaceRoot
+        input.title = record.title
+        input.conversationId = record.conversationId ?? ""
+        input.groupTagsText = (record.groupTags ?? []).joined(separator: ", ")
+        if let shell = record.commandShell, !shell.isEmpty {
             input.launchMode = .shell
             input.commandText = shell
-        } else if let argv = setup.commandArgv, !argv.isEmpty {
-            input.launchMode = .argv
-            input.commandText = argv.joined(separator: " ")
         } else {
             input.launchMode = .providerDefault
             input.commandText = ""
+        }
+    }
+}
+
+private struct HostConfigSheet: View {
+    let host: SavedHost
+    let token: String
+    let hostInfo: HostInfo
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var displayName: String
+    @State private var codexCommandText: String
+    @State private var claudeCommandText: String
+    @State private var isSaving = false
+    @State private var saveError: String?
+
+    init(host: SavedHost, token: String, hostInfo: HostInfo) {
+        self.host = host
+        self.token = token
+        self.hostInfo = hostInfo
+        _displayName = State(initialValue: hostInfo.displayName)
+        _codexCommandText = State(initialValue: "")
+        _claudeCommandText = State(initialValue: "")
+    }
+
+    private var canSave: Bool {
+        hostInfo.adminHost != nil && (hostInfo.adminPort ?? 0) > 0
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Identity") {
+                    TextField("Display name", text: $displayName)
+                        .autocorrectionDisabled()
+                }
+
+                Section {
+                    TextField("e.g. /opt/bin/codex --model o3", text: $codexCommandText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("e.g. /opt/bin/claude --print", text: $claudeCommandText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Provider Commands")
+                } footer: {
+                    Text("Override the default command used to launch each provider. Leave blank to use the host default. Arguments are space-separated.")
+                        .font(.caption)
+                }
+
+                if !canSave {
+                    Section {
+                        Text("Host listener settings are unavailable — cannot save config.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let saveError {
+                    Section {
+                        Text(saveError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Host Config")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(isSaving ? "Saving…" : "Save") {
+                        Task { await save() }
+                    }
+                    .disabled(isSaving || !canSave)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard let adminHost = hostInfo.adminHost,
+              let adminPort = hostInfo.adminPort, adminPort > 0 else { return }
+        let remoteHost = hostInfo.remoteHost ?? ""
+        let remotePort = hostInfo.remotePort ?? 0
+
+        var providerCommands: [String: [String]] = [:]
+        let codexTokens = codexCommandText.split(whereSeparator: \.isWhitespace).map(String.init)
+        if !codexTokens.isEmpty {
+            providerCommands["codex"] = codexTokens
+        }
+        let claudeTokens = claudeCommandText.split(whereSeparator: \.isWhitespace).map(String.init)
+        if !claudeTokens.isEmpty {
+            providerCommands["claude"] = claudeTokens
+        }
+
+        let payload = HostConfigPayload(
+            displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
+            adminHost: adminHost,
+            adminPort: adminPort,
+            remoteHost: remoteHost,
+            remotePort: remotePort,
+            providerCommands: providerCommands.isEmpty ? nil : providerCommands
+        )
+
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await HostClient(host: host).postHostConfig(host: host, token: token, payload: payload)
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
         }
     }
 }
